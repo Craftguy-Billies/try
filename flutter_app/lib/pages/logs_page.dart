@@ -27,7 +27,10 @@ class _LogsPageState extends State<LogsPage> {
   }
 
   void _onStateChanged() {
-    if (_autoScroll && appState.logCount > _lastLogCount && _scrollCtrl.hasClients) {
+    final newCount = appState.logCount;
+    final shouldScroll = _autoScroll && _scrollCtrl.hasClients && newCount > _lastLogCount;
+    _lastLogCount = newCount;
+    if (shouldScroll) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollCtrl.hasClients) {
           _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent,
@@ -35,7 +38,7 @@ class _LogsPageState extends State<LogsPage> {
         }
       });
     }
-    _lastLogCount = appState.logCount;
+    setState(() {}); // rebuild to show new log entries
   }
 
   void _toggleAutoScroll() {

@@ -50,7 +50,13 @@ class _FormPageState extends State<FormPage> with WidgetsBindingObserver {
     if (_submitting) return;
     setState(() => _submitting = true);
 
-    if (!_formKey.currentState!.validate()) {
+    final formState = _formKey.currentState;
+    if (formState == null) {
+      appState.log('FORM', 'Submit blocked: form not attached', color: Colors.red);
+      setState(() => _submitting = false);
+      return;
+    }
+    if (!formState.validate()) {
       appState.log('FORM', 'Validation FAILED: $_lastValidationError', color: Colors.red);
       setState(() { _submitted = true; _submitting = false; });
       return;
@@ -59,6 +65,7 @@ class _FormPageState extends State<FormPage> with WidgetsBindingObserver {
     setState(() => _submitted = true);
     appState.log('FORM', 'SUBMITTED — Name: ${_nameCtrl.text}, Email: ${_emailCtrl.text}, Gender: ${_selectedGender ?? "N/A"}, Phone: ${_phoneCtrl.text.isEmpty ? "N/A" : _phoneCtrl.text}', color: Colors.green);
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('✅ Form submitted successfully!'),
@@ -87,7 +94,7 @@ class _FormPageState extends State<FormPage> with WidgetsBindingObserver {
             onPressed: () {
               Navigator.pop(ctx);
               setState(() {
-                _formKey.currentState!.reset();
+                _formKey.currentState?.reset();
                 _nameCtrl.clear();
                 _emailCtrl.clear();
                 _phoneCtrl.clear();

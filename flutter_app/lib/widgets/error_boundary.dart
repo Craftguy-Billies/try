@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../state/app_state.dart';
 
 class ErrorBoundary extends StatefulWidget {
   final Widget child;
@@ -10,21 +11,27 @@ class ErrorBoundary extends StatefulWidget {
 }
 
 class _ErrorBoundaryState extends State<ErrorBoundary> {
-  Object? _error;
-  StackTrace? _stack;
+  ErrorWidgetBuilder? _originalBuilder;
 
   @override
   void initState() {
     super.initState();
-    ErrorWidget.builder = (details) {
-      _error = details.exception;
-      _stack = details.stack;
-      // Re-wrap in our error UI for the specific subtree
-      return _buildErrorUI(details.exception.toString());
-    };
+    _originalBuilder = ErrorWidget.builder;
   }
 
-  Widget _buildErrorUI(String message) {
+  @override
+  void dispose() {
+    if (_originalBuilder != null) {
+      ErrorWidget.builder = _originalBuilder!;
+    }
+    super.dispose();
+  }
+
+  Widget _buildErrorUI(FlutterErrorDetails details) {
+    final message = details.exceptionAsString();
+    final short = message.length > 200 ? '${message.substring(0, 200)}...' : message;
+    appState.log('ERROR', '${widget.pageName}: $short', color: Colors.red);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -37,7 +44,7 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
               style: Theme.of(context).textTheme.titleMedium,
               textAlign: TextAlign.center),
             const SizedBox(height: 8),
-            Text(message.length > 200 ? '${message.substring(0, 200)}...' : message,
+            Text(short,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.error,
                 fontFamily: 'monospace',
@@ -48,7 +55,10 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
             FilledButton.icon(
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
-              onPressed: () => setState(() { _error = null; _stack = null; }),
+              onPressed: () {
+                appState.log('ERROR', 'Retry pressed on ${widget.pageName}', color: Colors.orange);
+                setState(() {});
+              },
             ),
           ],
         ),
@@ -58,7 +68,7 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
 
   @override
   Widget build(BuildContext context) {
-    if (_error != null) return _buildErrorUI(_error.toString());
+    ErrorWidget.builder = (FlutterErrorDetails details) => _buildErrorUI(details);
     return widget.child;
   }
 }
