@@ -1,4 +1,3 @@
-import '../state/app_state.dart';
 import 'package:flutter/material.dart';
 import '../state/app_state.dart';
 

@@ -1,4 +1,3 @@
-import '../state/app_state.dart';
 import 'package:flutter/material.dart';
 import '../state/app_state.dart';
 
@@ -23,10 +22,16 @@ class _FormPageState extends State<FormPage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    appState.addListener(_onAppStateChanged);
+  }
+
+  void _onAppStateChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    appState.removeListener(_onAppStateChanged);
     WidgetsBinding.instance.removeObserver(this);
     _nameCtrl.dispose();
     _emailCtrl.dispose();

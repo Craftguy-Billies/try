@@ -1,4 +1,3 @@
-import '../state/app_state.dart';
 import 'package:flutter/material.dart';
 import '../state/app_state.dart';
 
@@ -10,51 +9,54 @@ class CounterPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Counter'), centerTitle: true),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            RepaintBoundary(
-              child: Icon(Icons.touch_app, size: 64, color: cs.primary.withAlpha(120)),
-            ),
-            const SizedBox(height: 16),
-            Text('Tap Count', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: cs.onSurface.withAlpha(150))),
-            const SizedBox(height: 8),
-            RepaintBoundary(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-                child: Text('${appState.counter}',
-                  key: ValueKey('counter_${appState.counter}'),
-                  style: Theme.of(context).textTheme.displayLarge?.copyWith(fontWeight: FontWeight.bold, color: cs.primary),
+      body: ListenableBuilder(
+        listenable: appState,
+        builder: (context, _) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              RepaintBoundary(
+                child: Icon(Icons.touch_app, size: 64, color: cs.primary.withAlpha(120)),
+              ),
+              const SizedBox(height: 16),
+              Text('Tap Count', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: cs.onSurface.withAlpha(150))),
+              const SizedBox(height: 8),
+              RepaintBoundary(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                  child: Text('${appState.counter}',
+                    key: ValueKey('counter_${appState.counter}'),
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(fontWeight: FontWeight.bold, color: cs.primary),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                FilledButton.tonalIcon(
-                  onPressed: () => appState.decrement(),
-                  icon: const Icon(Icons.remove),
-                  label: const Text('Decrement'),
-                ),
-                const SizedBox(width: 16),
-                FilledButton.icon(
-                  onPressed: () => appState.increment(),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Increment'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () => _confirmReset(context),
-              child: const Text('Reset'),
-            ),
-            const SizedBox(height: 24),
-            _buildGesturePad(context),
-          ],
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: () => appState.decrement(),
+                    icon: const Icon(Icons.remove),
+                    label: const Text('Decrement'),
+                  ),
+                  const SizedBox(width: 16),
+                  FilledButton.icon(
+                    onPressed: () => appState.increment(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Increment'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () => _confirmReset(context),
+                child: const Text('Reset'),
+              ),
+              const SizedBox(height: 24),
+              _buildGesturePad(context),
+            ],
+          ),
         ),
       ),
     );

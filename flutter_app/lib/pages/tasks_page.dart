@@ -1,4 +1,3 @@
-import '../state/app_state.dart';
 import 'package:flutter/material.dart';
 import '../state/app_state.dart';
 import '../models/todo_item.dart';
@@ -16,7 +15,18 @@ class _TasksPageState extends State<TasksPage> {
   bool _adding = false;
 
   @override
+  void initState() {
+    super.initState();
+    appState.addListener(_onAppStateChanged);
+  }
+
+  void _onAppStateChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    appState.removeListener(_onAppStateChanged);
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();

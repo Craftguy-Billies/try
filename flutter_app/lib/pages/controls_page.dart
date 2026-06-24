@@ -1,4 +1,3 @@
-import '../state/app_state.dart';
 import 'package:flutter/material.dart';
 import '../state/app_state.dart';
 
@@ -10,7 +9,9 @@ class ControlsPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Controls'), centerTitle: true),
-      body: ListView(
+      body: ListenableBuilder(
+        listenable: appState,
+        builder: (context, _) => ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _section(context, 'Slider — ${appState.sliderValue.toInt()}%', Icons.tune, [
@@ -117,7 +118,8 @@ class ControlsPage extends StatelessWidget {
           ]),
           const SizedBox(height: 80),
         ],
-      ),
+        ),      // closes ListView
+      ),        // closes ListenableBuilder
     );
   }
 
