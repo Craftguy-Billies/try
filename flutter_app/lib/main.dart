@@ -8,6 +8,8 @@ import 'pages/tasks_page.dart';
 import 'pages/controls_page.dart';
 import 'pages/form_page.dart';
 import 'pages/logs_page.dart';
+import 'pages/drawing_page.dart';
+import 'pages/reaction_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,7 +78,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   int _tab = 0;
   String? _lastNavigationLog;
-  static const _tabNames = ['Counter', 'Tasks', 'Controls', 'Form', 'Logs'];
+  static const _tabNames = ['Counter', 'Tasks', 'Controls', 'Form', 'Sketch', 'Reaction', 'Logs'];
 
   late final List<Widget> _tabs;
 
@@ -89,6 +91,8 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       ErrorBoundary(pageName: 'Tasks', child: TasksPage()),
       ErrorBoundary(pageName: 'Controls', child: ControlsPage()),
       ErrorBoundary(pageName: 'Form', child: FormPage()),
+      ErrorBoundary(pageName: 'Sketch', child: DrawingPage()),
+      ErrorBoundary(pageName: 'Reaction', child: ReactionPage()),
       ErrorBoundary(pageName: 'Logs', child: LogsPage()),
     ];
 
@@ -150,6 +154,8 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
             NavigationDestination(icon: Icon(Icons.checklist), label: 'Tasks'),
             NavigationDestination(icon: Icon(Icons.tune), label: 'Controls'),
             NavigationDestination(icon: Icon(Icons.assignment), label: 'Form'),
+            NavigationDestination(icon: Icon(Icons.brush), label: 'Sketch'),
+            NavigationDestination(icon: Icon(Icons.flash_on), label: 'Reaction'),
             NavigationDestination(icon: Icon(Icons.terminal), label: 'Logs'),
           ],
         ),
