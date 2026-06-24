@@ -63,11 +63,13 @@ class _ConfettiWidgetState extends State<ConfettiWidget> with SingleTickerProvid
     return Stack(
       children: [
         widget.child,
-        AnimatedBuilder(
-          animation: _ctrl,
-          builder: (_, __) => CustomPaint(
-            size: Size.infinite,
-            painter: _ConfettiPainter(particles: _particles, progress: _ctrl.value),
+        IgnorePointer(
+          child: AnimatedBuilder(
+            animation: _ctrl,
+            builder: (_, __) => CustomPaint(
+              size: Size.infinite,
+              painter: _ConfettiPainter(particles: _particles, progress: _ctrl.value),
+            ),
           ),
         ),
       ],
