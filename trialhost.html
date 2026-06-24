@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0">
+<title>TrialHost — Debug Logging Panel</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--border:#30363d;--text:#e6edf3;--accent:#58a6ff;--warn:#d29922;--err:#f85149;--ok:#3fb950;--dim:#8b949e;--hover:#1c2129}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,monospace;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+header{background:var(--panel);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+header h1{font-size:16px;font-weight:600;white-space:nowrap}
+.controls{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+button,input,select{font-family:inherit;font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--text);cursor:pointer;transition:background .15s}
+button:hover{background:var(--hover)}
+button:active{transform:scale(.97)}
+.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+.primary:hover{background:#79c0ff}
+.danger{background:var(--err);color:#fff;border-color:var(--err);font-weight:600}
+.danger:hover{background:#ff6b6b}
+#filter{width:160px}
+.stats{display:flex;gap:10px;font-size:11px;color:var(--dim)}
+.stats span{white-space:nowrap}
+.stats b{color:var(--text)}
+
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+#log-container{flex:1;overflow-y:auto;padding:4px 0;font-family:'SF Mono',Fira Code,Consolas,monospace;font-size:12px;line-height:1.6}
+.log-entry{display:flex;gap:6px;padding:2px 12px;border-bottom:1px solid transparent;transition:background .1s;cursor:default;align-items:flex-start}
+.log-entry:hover{background:var(--hover);border-bottom-color:var(--border)}
+.log-time{color:var(--dim);white-space:nowrap;min-width:85px;flex-shrink:0;user-select:none}
+.log-type{white-space:nowrap;min-width:80px;flex-shrink:0;font-weight:600;user-select:none}
+.log-type.info{color:var(--accent)}
+.log-type.warn{color:var(--warn)}
+.log-type.error{color:var(--err)}
+.log-type.ok{color:var(--ok)}
+.log-type.perf{color:#a371f7}
+.log-type.net{color:#79c0ff}
+.log-type.user{color:#ffa657}
+.log-type.session{color:#56d364}
+.log-type.sensor{color:#e27cff}
+.log-detail{word-break:break-all;flex:1;opacity:.9}
+
+.quickbar{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;border-top:1px solid var(--border);background:var(--panel)}
+.event-tester{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;border-top:1px solid var(--border);background:var(--panel)}
+.event-tester summary{font-size:12px;color:var(--dim);cursor:pointer;padding:2px 0}
+.event-tester summary:hover{color:var(--text)}
+.event-tester .row{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.event-tester button{font-size:11px;padding:4px 8px}
+
+.conn-status{display:inline-flex;align-items:center;gap:4px;font-size:11px}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite}
+.conn-dot.off{background:var(--err);animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* mobile touch */
+@media (max-width:600px){
+  .controls{flex-wrap:wrap}
+  #filter{width:100px}
+  .log-time{min-width:65px;font-size:10px}
+  .log-type{min-width:60px;font-size:10px}
+  .log-detail{font-size:10px}
+  header h1{font-size:14px}
+  .event-tester button{font-size:10px;padding:6px 10px}
+}
+
+/* Demo area */
+.demo-area{margin:12px;padding:16px;background:var(--panel);border:1px dashed var(--border);border-radius:8px;display:flex;flex-direction:column;gap:10px;max-width:500px}
+.demo-area h3{font-size:14px;color:var(--dim)}
+.demo-area input,.demo-area select{padding:8px;border-radius:6px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:14px}
+.demo-area .drag-zone{height:60px;border:2px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12px;user-select:none}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔍 TrialHost Debug Panel <span id="session-id" style="font-size:10px;color:var(--dim);font-weight:400"></span></h1>
+  <div class="controls">
+    <span class="conn-status"><span class="conn-dot" id="conn-dot"></span><span id="conn-label">online</span></span>
+    <input id="filter" type="text" placeholder="Filter logs…" autocomplete="off">
+    <button id="btn-pause" title="Pause/unpause log scrolling">⏯ Pause</button>
+    <button id="btn-clear">🗑 Clear</button>
+    <button id="btn-export">📥 Export</button>
+    <button class="danger" id="btn-reset">↺ Reset</button>
+  </div>
+  <div class="stats">
+    <span>Total: <b id="stat-total">0</b></span>
+    <span>Err: <b id="stat-err">0</b></span>
+    <span>Warn: <b id="stat-warn">0</b></span>
+  </div>
+</header>
+
+<main>
+  <div id="demo-area-wrapper" style="overflow-y:auto;flex-shrink:0;max-height:200px">
+    <div class="demo-area">
+      <h3>🧪 Interaction Test Zone (all events logged below)</h3>
+      <input type="text" id="demo-input" placeholder="Type here to see key events…">
+      <input type="text" id="demo-input2" placeholder="Focus/blur test…">
+      <select id="demo-select"><option>Option A</option><option>Option B</option><option>Option C</option></select>
+      <div class="drag-zone" id="drag-zone">🖱 Drag files here or click</div>
+      <button id="demo-btn" class="primary">Click Me</button>
+      <button id="demo-dbl-btn">Double-Click Me</button>
+      <button id="demo-err-btn" class="danger">Trigger Error</button>
+      <button id="demo-fetch-btn">Test Fetch</button>
+      <button id="demo-localstore-btn">Test localStorage</button>
+      <input type="file" id="demo-file" style="font-size:12px">
+      <input type="color" id="demo-color" value="#58a6ff">
+      <input type="range" id="demo-range" min="0" max="100" value="50">
+    </div>
+  </div>
+  <div id="log-container"></div>
+</main>
+
+<details class="event-tester">
+  <summary>⚡ Quick Event Fire Buttons</summary>
+  <div class="row">
+    <button data-fire="click">Click</button>
+    <button data-fire="dblclick">DblClick</button>
+    <button data-fire="mousedown">MouseDown</button>
+    <button data-fire="mouseup">MouseUp</button>
+    <button data-fire="keydown-a">KeyDown 'a'</button>
+    <button data-fire="keyup-a">KeyUp 'a'</button>
+    <button data-fire="focus-trigger">Focus Trigger</button>
+    <button data-fire="blur-trigger">Blur Trigger</button>
+    <button data-fire="scroll-trigger">Scroll</button>
+    <button data-fire="resize-trigger">Resize Note</button>
+    <button data-fire="network-fast">Quick Fetch</button>
+    <button data-fire="network-slow">Slow Fetch</button>
+    <button data-fire="network-404">404 Request</button>
+    <button data-fire="network-error">Network Error</button>
+    <button data-fire="storage-set">Set Storage</button>
+    <button data-fire="storage-get">Get Storage</button>
+    <button data-fire="storage-remove">Remove Storage</button>
+    <button data-fire="rejection">Unhandled Rejection</button>
+    <button data-fire="animation">Trigger Animation</button>
+    <button data-fire="transition">Trigger Transition</button>
+    <button data-fire="fullscreen">Toggle Fullscreen</button>
+    <button data-fire="clipboard-copy">Copy Test</button>
+    <button data-fire="selection">Select Text</button>
+    <button data-fire="pointer-lock">Pointer Lock</button>
+  </div>
+</details>
+
+<div class="quickbar">
+  <button id="btn-autoscroll" class="primary" style="font-size:11px">📌 Auto-scroll ON</button>
+  <span style="font-size:10px;color:var(--dim)">Log limit: <b id="log-limit-label">5000</b></span>
+  <button id="btn-limit-1000" style="font-size:10px">Limit 1k</button>
+  <button id="btn-limit-5000" style="font-size:10px">Limit 5k</button>
+  <button id="btn-limit-nolimit" style="font-size:10px">No Limit</button>
+</div>
+
+<script>
+// ============ TRIALHOST — PRODUCTION DEBUG LOGGING ENGINE ============
+
+(function(){
+'use strict';
+
+// ---- Configuration ----
+const CFG = {
+  maxLogs: 5000,
+  autoScroll: true,
+  paused: false,
+  filter: '',
+  sessionId: 'TH_' + Date.now().toString(36).toUpperCase() + '_' + Math.random().toString(36).slice(2, 7).toUpperCase(),
+  sessionStart: Date.now(),
+  consoleIntercept: true,
+  networkIntercept: true,
+  sensorThrottle: 300,
+  motionThrottle: 500,
+  scrollThrottle: 200,
+  resizeThrottle: 300,
+  mouseThrottle: 100,
+  touchThrottle: 100,
+};
+
+// ---- State ----
+const STATE = {
+  logs: [],
+  stats: { total:0, error:0, warn:0 },
+  lastSensorLog: 0,
+  lastMotionLog: 0,
+  lastScrollLog: 0,
+  lastResizeLog: 0,
+  lastMouseMoveLog: 0,
+  lastTouchMoveLog: 0,
+  _rafPending: false,
+  _renderTimeout: null,
+  pointerLocked: false,
+  fullscreen: false,
+  visibilityHidden: false,
+  online: navigator.onLine,
+  userAgent: navigator.userAgent,
+  platform: navigator.platform,
+  language: navigator.language,
+  cookieEnabled: navigator.cookieEnabled,
+  hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
+  maxTouchPoints: navigator.maxTouchPoints || 0,
+  deviceMemory: navigator.deviceMemory || 'unknown',
+  connectionType: null,
+  connectionDownlink: null,
+  connectionRtt: null,
+  screenW: screen.width,
+  screenH: screen.height,
+  innerW: window.innerWidth,
+  innerH: window.innerHeight,
+  dpr: window.devicePixelRatio,
+};
+
+if (navigator.connection) {
+  STATE.connectionType = navigator.connection.effectiveType;
+  STATE.connectionDownlink = navigator.connection.downlink;
+  STATE.connectionRtt = navigator.connection.rtt;
+}
+
+// ---- DOM Refs ----
+const $ = (s)=>document.querySelector(s);
+const $$ = (s)=>document.querySelectorAll(s);
+const logContainer = $('#log-container');
+const filterInput = $('#filter');
+const sessionIdEl = $('#session-id');
+const connDot = $('#conn-dot');
+const connLabel = $('#conn-label');
+
+// ---- Log Types & Colors ----
+const LOG_LEVELS = {
+  info:  { cls:'info',  label:'INFO' },
+  warn:  { cls:'warn',  label:'WARN' },
+  error: { cls:'error', label:'ERROR' },
+  ok:    { cls:'ok',    label:'OK' },
+  perf:  { cls:'perf',  label:'PERF' },
+  net:   { cls:'net',   label:'NET' },
+  user:  { cls:'user',  label:'USER' },
+  session:{ cls:'session',label:'SESSION' },
+  sensor:{ cls:'sensor',label:'SENSOR' },
+};
+
+// ---- Core Log Function ----
+function log(level, detail, extra) {
+  const meta = LOG_LEVELS[level] || LOG_LEVELS.info;
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  const ms = String(now.getMilliseconds()).padStart(3,'0');
+  const timeStr = `${h}:${m}:${s}.${ms}`;
+  
+  const entry = {
+    id: CFG.sessionId + '_' + STATE.stats.total,
+    time: timeStr,
+    timestamp: now.getTime(),
+    level: level,
+    type: meta.label,
+    cls: meta.cls,
+    detail: typeof detail === 'string' ? detail : JSON.stringify(detail),
+    extra: extra || null,
+  };
+
+  STATE.logs.push(entry);
+  STATE.stats.total++;
+  if (level === 'error') STATE.stats.error++;
+  if (level === 'warn') STATE.stats.warn++;
+
+  // Enforce max log limit
+  while (STATE.logs.length > CFG.maxLogs) {
+    const removed = STATE.logs.shift();
+    if (removed.level === 'error') STATE.stats.error = Math.max(0, STATE.stats.error - 1);
+    if (removed.level === 'warn') STATE.stats.warn = Math.max(0, STATE.stats.warn - 1);
+  }
+
+  scheduleRender();
+}
+
+// ---- Throttled Log Helpers ----
+function logThrottled(key, lastKey, throttleMs, level, detailFn) {
+  const now = Date.now();
+  if (now - STATE[lastKey] > throttleMs) {
+    STATE[lastKey] = now;
+    log(level, detailFn());
+  }
+}
+
+// ---- Render ----
+function scheduleRender() {
+  if (STATE._renderTimeout) return;
+  STATE._renderTimeout = requestAnimationFrame(() => {
+    STATE._renderTimeout = null;
+    renderLogs();
+  });
+}
+
+function renderLogs() {
+  const filter = CFG.filter.toLowerCase();
+  let filtered = STATE.logs;
+  if (filter) {
+    filtered = STATE.logs.filter(e =>
+      e.detail.toLowerCase().includes(filter) ||
+      e.type.toLowerCase().includes(filter) ||
+      e.level.toLowerCase().includes(filter)
+    );
+  }
+
+  // Virtual render: only show last 500 entries in DOM
+  const MAX_DOM = 500;
+  const slice = filtered.length > MAX_DOM ? filtered.slice(-MAX_DOM) : filtered;
+  const wasAtBottom = logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight < 40;
+
+  // Build fragment
+  const frag = document.createDocumentFragment();
+  for (const e of slice) {
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.dataset.id = e.id;
+    div.innerHTML =
+      `<span class="log-time">${e.time}</span>` +
+      `<span class="log-type ${e.cls}">[${e.type}]</span>` +
+      `<span class="log-detail">${escHtml(e.detail)}</span>`;
+    frag.appendChild(div);
+  }
+
+  logContainer.innerHTML = '';
+  logContainer.appendChild(frag);
+
+  // Show overflow indicator
+  if (filtered.length > MAX_DOM) {
+    const indicator = document.createElement('div');
+    indicator.className = 'log-entry';
+    indicator.style.color = 'var(--dim)';
+    indicator.style.fontStyle = 'italic';
+    indicator.innerHTML = `<span class="log-time">…</span><span class="log-type">—</span><span class="log-detail">${filtered.length - MAX_DOM} older entries hidden (DOM limit). Use Export to see all.</span>`;
+    logContainer.insertBefore(indicator, logContainer.firstChild);
+  }
+
+  if (CFG.autoScroll && wasAtBottom) {
+    logContainer.scrollTop = logContainer.scrollHeight;
+  }
+
+  // Update stats
+  $('#stat-total').textContent = STATE.stats.total;
+  $('#stat-err').textContent = STATE.stats.error;
+  $('#stat-warn').textContent = STATE.stats.warn;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ---- Export ----
+function exportLogs() {
+  const data = STATE.logs.map(e =>
+    `[${e.time}] [${e.type}] ${e.detail}`
+  ).join('\n');
+  const blob = new Blob([`TrialHost Debug Log — Session ${CFG.sessionId}\n` +
+    `Started: ${new Date(CFG.sessionStart).toISOString()}\n` +
+    `User-Agent: ${STATE.userAgent}\n` +
+    `Platform: ${STATE.platform} | Language: ${STATE.language} | Online: ${STATE.online}\n` +
+    `Screen: ${STATE.screenW}x${STATE.screenH} | Viewport: ${STATE.innerW}x${STATE.innerH} | DPR: ${STATE.dpr}\n` +
+    `CPU Cores: ${STATE.hardwareConcurrency} | Memory: ${STATE.deviceMemory}GB | Touch Points: ${STATE.maxTouchPoints}\n` +
+    `Connection: ${STATE.connectionType || 'N/A'} | Downlink: ${STATE.connectionDownlink || 'N/A'}Mbps | RTT: ${STATE.connectionRtt || 'N/A'}ms\n` +
+    `Total Logs: ${STATE.stats.total} | Errors: ${STATE.stats.error} | Warnings: ${STATE.stats.warn}\n` +
+    `${'='.repeat(80)}\n\n`, ...STATE.logs.map(e =>
+    `[${e.time}] [${e.type}] ${e.detail}`
+  )].join('\n'), { type: 'text/plain;charset=utf-8' });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `trialhost-debug-${CFG.sessionId}.log`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  log('ok', 'Log exported to file');
+}
+
+function clearLogs() {
+  STATE.logs = [];
+  STATE.stats = { total:0, error:0, warn:0 };
+  logContainer.innerHTML = '<div class="log-entry"><span class="log-time">—</span><span class="log-type ok">[OK]</span><span class="log-detail">Logs cleared</span></div>';
+  renderLogs();
+}
+
+function resetSession() {
+  CFG.sessionId = 'TH_' + Date.now().toString(36).toUpperCase() + '_' + Math.random().toString(36).slice(2, 7).toUpperCase();
+  CFG.sessionStart = Date.now();
+  sessionIdEl.textContent = '#' + CFG.sessionId;
+  clearLogs();
+  log('session', `New session started: ${CFG.sessionId}`);
+  log('session', `UA: ${STATE.userAgent}`);
+  log('session', `Platform: ${STATE.platform} | Lang: ${STATE.language} | Online: ${STATE.online}`);
+  log('session', `Screen: ${STATE.screenW}x${STATE.screenH} | Viewport: ${STATE.innerW}x${STATE.innerH} | DPR: ${STATE.dpr}`);
+  log('session', `CPU cores: ${STATE.hardwareConcurrency} | Device Memory: ${STATE.deviceMemory}GB | Touch Points: ${STATE.maxTouchPoints}`);
+  if (STATE.connectionType) log('session', `Connection: ${STATE.connectionType} | Downlink: ${STATE.connectionDownlink}Mbps | RTT: ${STATE.connectionRtt}ms`);
+  log('ok', 'Session reset complete');
+}
+
+// ===================================================================
+// EVENT REGISTRATION — CATCH-ALL, NO MISSING CASES
+// ===================================================================
+
+// ---- 1. Window / Document Lifecycle Events ----
+window.addEventListener('DOMContentLoaded', () => log('session', 'DOMContentLoaded fired'), { once:true });
+window.addEventListener('load', () => {
+  log('session', 'Window load complete');
+  log('perf', `Page load time: ${Math.round(performance.now())}ms`);
+});
+window.addEventListener('beforeunload', (e) => {
+  log('session', 'beforeunload — user may be leaving the page');
+});
+window.addEventListener('unload', () => {
+  // Use sendBeacon if we want to persist
+  if (navigator.sendBeacon) {
+    const data = JSON.stringify({ session:CFG.sessionId, logs:STATE.stats.total, time:Date.now() });
+    navigator.sendBeacon('/_unload_beacon', data);
+  }
+});
+window.addEventListener('pagehide', (e) => log('session', `pagehide — persisted: ${e.persisted}`));
+window.addEventListener('pageshow', (e) => log('session', `pageshow — persisted: ${e.persisted}`));
+window.addEventListener('readystatechange', () => log('session', `readyState: ${document.readyState}`));
+
+// ---- 2. Visibility Change ----
+document.addEventListener('visibilitychange', () => {
+  STATE.visibilityHidden = document.hidden;
+  log('session', `Visibility: ${document.hidden ? 'HIDDEN (tab inactive)' : 'VISIBLE (tab active)'}`);
+});
+
+// ---- 3. Online / Offline ----
+window.addEventListener('online', () => {
+  STATE.online = true;
+  connDot.classList.remove('off');
+  connLabel.textContent = 'online';
+  log('session', 'Network: ONLINE — connection restored');
+});
+window.addEventListener('offline', () => {
+  STATE.online = false;
+  connDot.classList.add('off');
+  connLabel.textContent = 'offline';
+  log('warn', 'Network: OFFLINE — no connection available');
+});
+
+// ---- 4. Error Handling ----
+window.addEventListener('error', (e) => {
+  let detail = `Error: ${e.message || 'unknown'}`;
+  if (e.filename) detail += ` | File: ${e.filename}:${e.lineno}:${e.colno}`;
+  if (e.error && e.error.stack) detail += ` | Stack: ${e.error.stack.slice(0, 200)}`;
+  log('error', detail, { message:e.message, filename:e.filename, lineno:e.lineno, colno:e.colno });
+}, true); // capturing phase
+
+window.addEventListener('unhandledrejection', (e) => {
+  const reason = e.reason instanceof Error ? e.reason.message : String(e.reason);
+  log('error', `Unhandled Promise Rejection: ${reason}`, { reason: String(e.reason) });
+});
+
+// Security policy violations
+document.addEventListener('securitypolicyviolation', (e) => {
+  log('error', `CSP Violation: ${e.violatedDirective} — ${e.blockedURI}`, {
+    directive: e.violatedDirective,
+    blockedURI: e.blockedURI,
+    sourceFile: e.sourceFile,
+    lineNumber: e.lineNumber,
+  });
+});
+
+// ---- 5. Console Interception ----
+if (CFG.consoleIntercept) {
+  const _console = {};
+  ['log','warn','error','info','debug','trace'].forEach(method => {
+    _console[method] = console[method].bind(console);
+    console[method] = function(...args) {
+      _console[method](...args);
+      const msg = args.map(a => {
+        if (a instanceof Error) return a.message;
+        if (typeof a === 'object') try { return JSON.stringify(a).slice(0, 200); } catch(_) { return '[Object]'; }
+        return String(a).slice(0, 300);
+      }).join(' ');
+      const level = method === 'error' ? 'error' : method === 'warn' ? 'warn' : 'info';
+      log(level, `console.${method}: ${msg}`);
+    };
+  });
+}
+
+// ---- 6. Network Interception (Fetch + XHR) ----
+if (CFG.networkIntercept) {
+  // Fetch interception
+  const _fetch = window.fetch;
+  window.fetch = function(url, options={}) {
+    const startTime = performance.now();
+    const method = options.method || 'GET';
+    const urlStr = typeof url === 'string' ? url : (url.url || url.toString());
+    log('net', `Fetch ▶ ${method} ${urlStr.slice(0, 150)}`, { method, url:urlStr });
+
+    return _fetch.call(window, url, options).then(response => {
+      const duration = Math.round(performance.now() - startTime);
+      const cloned = response.clone();
+      const status = response.status;
+      const level = status >= 400 ? 'error' : status >= 300 ? 'warn' : 'net';
+      log(level, `Fetch ◀ ${status} ${response.statusText} — ${duration}ms — ${method} ${urlStr.slice(0, 100)}`, { status, duration, method, url:urlStr });
+
+      // Try to read body length
+      cloned.text().then(t => {
+        if (t.length > 0) log('net', `Fetch body: ${t.length} chars from ${urlStr.slice(0, 80)}`);
+      }).catch(()=>{});
+
+      return response;
+    }).catch(err => {
+      const duration = Math.round(performance.now() - startTime);
+      log('error', `Fetch ✕ FAILED — ${duration}ms — ${method} ${urlStr.slice(0, 100)} — ${err.message}`, { method, url:urlStr, error:err.message, duration });
+      throw err;
+    });
+  };
+
+  // XHR interception
+  const _xhrOpen = XMLHttpRequest.prototype.open;
+  const _xhrSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+    this._th_method = method;
+    this._th_url = url;
+    this._th_startTime = performance.now();
+    return _xhrOpen.call(this, method, url, ...rest);
+  };
+  XMLHttpRequest.prototype.send = function(...args) {
+    log('net', `XHR ▶ ${this._th_method} ${String(this._th_url).slice(0, 150)}`);
+    this.addEventListener('loadend', function() {
+      const duration = Math.round(performance.now() - this._th_startTime);
+      const level = this.status >= 400 ? 'error' : this.status >= 300 ? 'warn' : 'net';
+      log(level, `XHR ◀ ${this.status} ${this.statusText} — ${duration}ms — ${this._th_method} ${String(this._th_url).slice(0, 100)}`, { status:this.status, duration, method:this._th_method, url:this._th_url });
+    });
+    this.addEventListener('error', function() {
+      const duration = Math.round(performance.now() - this._th_startTime);
+      log('error', `XHR ✕ NETWORK ERROR — ${duration}ms — ${this._th_method} ${String(this._th_url).slice(0, 100)}`);
+    });
+    this.addEventListener('abort', function() {
+      log('warn', `XHR ⚠ ABORTED — ${this._th_method} ${String(this._th_url).slice(0, 100)}`);
+    });
+    this.addEventListener('timeout', function() {
+      log('warn', `XHR ⏱ TIMEOUT — ${this._th_method} ${String(this._th_url).slice(0, 100)}`);
+    });
+    return _xhrSend.call(this, ...args);
+  };
+}
+
+// ---- 7. Performance Observer (Long Tasks, Paint, Layout Shift) ----
+if (window.PerformanceObserver) {
+  try {
+    // Long tasks
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.duration > 50) {
+          log('perf', `Long Task: ${Math.round(entry.duration)}ms | Start: ${entry.startTime.toFixed(1)}`, { duration:entry.duration, startTime:entry.startTime, name:entry.name });
+        }
+      }
+    }).observe({ type: 'longtask', buffered: true });
+
+    // Paint timing
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        log('perf', `Paint: ${entry.name} at ${entry.startTime.toFixed(1)}ms`);
+      }
+    }).observe({ type: 'paint', buffered: true });
+
+    // Layout shifts
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.value > 0.01) {
+          log('perf', `Layout Shift: value=${entry.value.toFixed(4)}`);
+        }
+      }
+    }).observe({ type: 'layout-shift', buffered: true });
+
+    // Largest Contentful Paint
+    new PerformanceObserver((list) => {
+      const entries = list.getEntries();
+      const last = entries[entries.length - 1];
+      if (last) log('perf', `LCP (Largest Contentful Paint): ${last.startTime.toFixed(1)}ms | element: ${last.element?.tagName || 'unknown'}`);
+    }).observe({ type: 'largest-contentful-paint', buffered: true });
+
+    // First Input Delay
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        log('perf', `First Input: delay=${entry.processingStart - entry.startTime}ms | type: ${entry.name}`);
+      }
+    }).observe({ type: 'first-input', buffered: true });
+
+    // Resource timing
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.duration > 100) {
+          log('perf', `Resource: ${entry.name.slice(0, 100)} — ${Math.round(entry.duration)}ms`, { name:entry.name, duration:entry.duration, initiatorType:entry.initiatorType });
+        }
+      }
+    }).observe({ type: 'resource', buffered: true });
+
+  } catch(e) { log('warn', `PerformanceObserver setup error: ${e.message}`); }
+}
+
+// ---- 8. Mouse Events (comprehensive) ----
+['click','dblclick','mousedown','mouseup','mouseenter','mouseleave','mouseover','mouseout','contextmenu','auxclick'].forEach(evt => {
+  document.addEventListener(evt, (e) => {
+    const target = e.target.tagName + (e.target.id ? '#'+e.target.id : '') + (e.target.className ? '.'+e.target.className.split(' ')[0] : '');
+    log('user', `${evt} on <${target}> | client(${Math.round(e.clientX)},${Math.round(e.clientY)}) | button:${e.button} | altKey:${e.altKey} ctrlKey:${e.ctrlKey} shiftKey:${e.shiftKey} metaKey:${e.metaKey}`);
+  }, true);
+});
+
+document.addEventListener('mousemove', (e) => {
+  logThrottled('mouse', 'lastMouseMoveLog', CFG.mouseThrottle, 'user',
+    () => `mousemove | client(${Math.round(e.clientX)},${Math.round(e.clientY)}) | page(${Math.round(e.pageX)},${Math.round(e.pageY)}) | screen(${e.screenX},${e.screenY})`);
+}, true);
+
+// ---- 9. Wheel Events ----
+document.addEventListener('wheel', (e) => {
+  log('user', `wheel | deltaX:${Math.round(e.deltaX)} deltaY:${Math.round(e.deltaY)} deltaZ:${Math.round(e.deltaZ)} | deltaMode:${e.deltaMode} | ctrlKey:${e.ctrlKey}`);
+}, true);
+
+// ---- 10. Keyboard Events (comprehensive) ----
+['keydown','keyup','keypress'].forEach(evt => {
+  document.addEventListener(evt, (e) => {
+    const target = e.target.tagName + (e.target.id ? '#'+e.target.id : '') + (e.target.type ? '[type='+e.target.type+']' : '');
+    log('user', `${evt} | key:'${e.key}' code:'${e.code}' | target:<${target}> | repeat:${e.repeat} | altKey:${e.altKey} ctrlKey:${e.ctrlKey} shiftKey:${e.shiftKey} metaKey:${e.metaKey}`);
+    // Special combo detection
+    if (e.ctrlKey && e.key === 'c') log('user', '⚠ Clipboard copy combo detected (Ctrl+C)');
+    if (e.ctrlKey && e.key === 'v') log('user', '⚠ Clipboard paste combo detected (Ctrl+V)');
+    if (e.ctrlKey && e.key === 'z') log('user', '⚠ Undo combo detected (Ctrl+Z)');
+    if (e.ctrlKey && e.key === 's') log('user', '⚠ Save combo detected (Ctrl+S)');
+    if (e.altKey && e.key === 'Tab') log('user', '⚠ Alt+Tab detected — user may switch apps');
+    if (e.key === 'Escape') log('user', '⚠ Escape key — user may cancel action');
+    if (e.key === 'Enter') log('user', '⚠ Enter key — form submission likely');
+    if (e.key === 'Tab') log('user', '⚠ Tab — focus navigation');
+    if (e.key === 'F5') log('user', '⚠ F5 — page refresh requested');
+    if (e.key === 'F11') log('user', '⚠ F11 — fullscreen toggle requested');
+    if (e.key === 'F12') log('user', '⚠ F12 — devtools likely opened');
+    if (e.key === 'Backspace' && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) {
+      log('warn', '⚠ Backspace pressed on non-input element — browser may navigate back');
+    }
+  }, true);
+});
+
+// ---- 11. Touch Events (mobile comprehensive) ----
+['touchstart','touchend','touchmove','touchcancel'].forEach(evt => {
+  document.addEventListener(evt, (e) => {
+    const touches = e.touches.length > 0 ? e.touches : (e.changedTouches || []);
+    const coords = Array.from(touches).map(t => `(${Math.round(t.clientX)},${Math.round(t.clientY)})`).join(' ');
+    const target = e.target.tagName + (e.target.id ? '#'+e.target.id : '');
+    log('user', `${evt} | touches:${e.touches.length} changed:${(e.changedTouches||[]).length} | ${coords || 'no coords'} | target:<${target}>`);
+    // Detect gesture types
+    if (evt === 'touchstart' && e.touches.length === 2) log('sensor', 'Multi-touch (2 fingers) — possible pinch/zoom gesture');
+    if (evt === 'touchstart' && e.touches.length === 3) log('sensor', 'Multi-touch (3 fingers) — possible screenshot or OS gesture');
+    if (evt === 'touchcancel') log('warn', 'Touch cancelled — possible interruption (incoming call, notification, system gesture)');
+  }, { passive: true });
+});
+
+// Also pointer events for unified input
+['pointerdown','pointerup','pointermove','pointercancel','pointerenter','pointerleave','pointerover','pointerout','gotpointercapture','lostpointercapture'].forEach(evt => {
+  document.addEventListener(evt, (e) => {
+    if (evt === 'pointermove') {
+      logThrottled('pointer', 'lastPointerMoveLog', 150, 'user', () =>
+        `pointermove | id:${e.pointerId} type:${e.pointerType} | client(${Math.round(e.clientX)},${Math.round(e.clientY)}) | pressure:${e.pressure.toFixed(2)} | width:${e.width} height:${e.height}`);
+    } else {
+      log('user', `${evt} | id:${e.pointerId} type:${e.pointerType} | pressure:${e.pressure.toFixed(2)}`);
+    }
+  }, true);
+});
+
+// ---- 12. Focus / Blur ----
+['focus','blur','focusin','focusout'].forEach(evt => {
+  document.addEventListener(evt, (e) => {
+    const target = e.target.tagName + (e.target.id ? '#'+e.target.id : '') + (e.target.type ? '[type='+e.target.type+']' : '') + (e.target.name ? '[name='+e.target.name+']' : '');
+    const related = e.relatedTarget ? (e.relatedTarget.tagName + (e.relatedTarget.id ? '#'+e.relatedTarget.id : '')) : 'null';
+    log('user', `${evt} | target:<${target}> | relatedTarget:<${related}>`);
+  }, true);
+});
+
+// ---- 13. Input / Change / Select / Submit / Reset ----
+['input','change','select'].forEach(evt => {
+  document.addEventListener(evt, (e) => {
+    const target = e.target.tagName + (e.target.id ? '#'+e.target.id : '') + (e.target.type ? '[type='+e.target.type+']' : '');
+    let val = '';
+    if (e.target.value !== undefined) val = String(e.target.value).slice(0, 80);
+    if (target.includes('password')) val = '***';
+    log('user', `${evt} on <${target}> | value: "${val}"${val.length > 80 ? '…(truncated)' : ''}`);
+  }, true);
+});
+
+document.addEventListener('submit', (e) => {
+  log('user', `submit on <${e.target.tagName}${e.target.id?'#'+e.target.id:''}> | action: ${e.target.action || 'default'} | method: ${e.target.method || 'GET'}`);
+}, true);
+
+document.addEventListener('reset', (e) => {
+  log('user', `form reset on <${e.target.tagName}${e.target.id?'#'+e.target.id:''}>`);
+}, true);
+
+document.addEventListener('invalid', (e) => {
+  log('warn', `form validation failed on <${e.target.tagName}${e.target.id?'#'+e.target.id:''}> | message: ${e.target.validationMessage}`);
+}, true);
+
+// ---- 14. Selection ----
+document.addEventListener('selectionchange', () => {
+  const sel = window.getSelection();
+  if (sel && sel.toString().length > 0) {
+    log('user', `selection: "${sel.toString().slice(0, 100)}" | rangeCount: ${sel.rangeCount} | anchorNode: ${sel.anchorNode?.nodeName || 'null'}`);
+  }
+});
+document.addEventListener('selectstart', (e) => {
+  log('user', 'selectstart — user began selecting text');
+});
+
+// ---- 15. Clipboard ----
+document.addEventListener('copy', (e) => {
+  const sel = window.getSelection();
+  log('user', `copy | text: "${sel ? sel.toString().slice(0, 100) : 'none'}" | clipboardData: ${e.clipboardData ? 'present' : 'none'}`);
+});
+document.addEventListener('cut', (e) => {
+  const sel = window.getSelection();
+  log('user', `cut | text: "${sel ? sel.toString().slice(0, 100) : 'none'}"`);
+});
+document.addEventListener('paste', (e) => {
+  const types = e.clipboardData ? Array.from(e.clipboardData.types).join(', ') : 'none';
+  log('user', `paste | clipboard types: [${types}]`);
+});
+
+// ---- 16. Scroll ----
+document.addEventListener('scroll', (e) => {
+  const target = e.target === document ? 'document' : (e.target.tagName + (e.target.id?'#'+e.target.id:''));
+  logThrottled('scroll', 'lastScrollLog', CFG.scrollThrottle, 'user', () =>
+    `scroll on ${target} | scrollY:${Math.round(window.scrollY)} scrollX:${Math.round(window.scrollX)} | pageYOffset:${Math.round(window.pageYOffset)}`);
+}, true);
+
+// ---- 17. Resize / Orientation ----
+window.addEventListener('resize', () => {
+  logThrottled('resize', 'lastResizeLog', CFG.resizeThrottle, 'session', () =>
+    `resize | inner:${window.innerWidth}x${window.innerHeight} outer:${window.outerWidth}x${window.outerHeight} | DPR:${window.devicePixelRatio} | scrollbar W:${window.innerWidth - document.documentElement.clientWidth}px`);
+});
+
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => {
+    log('session', `orientationchange | type: ${screen.orientation?.type || 'unknown'} | angle: ${screen.orientation?.angle || window.orientation || '?'} | inner:${window.innerWidth}x${window.innerHeight}`);
+  }, 100);
+});
+
+// ---- 18. Drag & Drop ----
+['dragstart','drag','dragend','dragenter','dragover','dragleave','drop'].forEach(evt => {
+  document.addEventListener(evt, (e) => {
+    const target = e.target.tagName + (e.target.id ? '#'+e.target.id : '');
+    const files = e.dataTransfer?.files ? `${e.dataTransfer.files.length} file(s)` : 'none';
+    const types = e.dataTransfer?.types ? Array.from(e.dataTransfer.types).join(',') : 'none';
+    log('user', `${evt} on <${target}> | files:${files} | dataTypes:[${types}] | effectAllowed:${e.dataTransfer?.effectAllowed || 'none'}`);
+    if (evt === 'drop' && e.dataTransfer?.files?.length > 0) {
+      for (const f of e.dataTransfer.files) {
+        log('user', `file dropped: "${f.name}" | size:${f.size}B | type:${f.type} | lastModified:${new Date(f.lastModified).toISOString()}`);
+      }
+    }
+  }, true);
+});
+
+// ---- 19. Device Sensor Events (mobile) ----
+window.addEventListener('deviceorientation', (e) => {
+  logThrottled('orientation', 'lastSensorLog', CFG.sensorThrottle, 'sensor', () =>
+    `deviceorientation | alpha:${e.alpha?.toFixed(1) || 'null'} beta:${e.beta?.toFixed(1) || 'null'} gamma:${e.gamma?.toFixed(1) || 'null'} | compass:${e.webkitCompassHeading || 'N/A'}`);
+}, true);
+
+window.addEventListener('devicemotion', (e) => {
+  const a = e.acceleration;
+  const ag = e.accelerationIncludingGravity;
+  const r = e.rotationRate;
+  logThrottled('motion', 'lastMotionLog', CFG.motionThrottle, 'sensor', () =>
+    `devicemotion | accel(${a?.x?.toFixed(1)||'?'},${a?.y?.toFixed(1)||'?'},${a?.z?.toFixed(1)||'?'}) | grav(${ag?.x?.toFixed(1)||'?'},${ag?.y?.toFixed(1)||'?'},${ag?.z?.toFixed(1)||'?'}) | rot(${r?.alpha?.toFixed(1)||'?'},${r?.beta?.toFixed(1)||'?'},${r?.gamma?.toFixed(1)||'?'})`);
+}, true);
+
+// ---- 20. Fullscreen ----
+document.addEventListener('fullscreenchange', () => {
+  STATE.fullscreen = !!document.fullscreenElement;
+  log('session', `fullscreenchange — ${STATE.fullscreen ? 'ENTERED fullscreen' : 'EXITED fullscreen'} | element: ${document.fullscreenElement?.tagName || 'none'}`);
+});
+document.addEventListener('fullscreenerror', () => {
+  log('error', 'fullscreenerror — fullscreen request was denied');
+});
+
+// ---- 21. Pointer Lock ----
+document.addEventListener('pointerlockchange', () => {
+  STATE.pointerLocked = document.pointerLockElement !== null;
+  log('session', `pointerlockchange — ${STATE.pointerLocked ? 'LOCKED' : 'UNLOCKED'}`);
+});
+document.addEventListener('pointerlockerror', () => {
+  log('error', 'pointerlockerror — pointer lock request denied');
+});
+
+// ---- 22. Animation & Transition Events ----
+document.addEventListener('animationstart', (e) => {
+  log('perf', `animationstart: ${e.animationName} | elapsedTime:${e.elapsedTime.toFixed(2)}s`);
+}, true);
+document.addEventListener('animationend', (e) => {
+  log('perf', `animationend: ${e.animationName} | elapsedTime:${e.elapsedTime.toFixed(2)}s`);
+}, true);
+document.addEventListener('animationiteration', (e) => {
+  log('perf', `animationiteration: ${e.animationName} | elapsedTime:${e.elapsedTime.toFixed(2)}s`);
+}, true);
+document.addEventListener('transitionstart', (e) => {
+  log('perf', `transitionstart: ${e.propertyName} | elapsedTime:${e.elapsedTime.toFixed(2)}s`);
+}, true);
+document.addEventListener('transitionend', (e) => {
+  log('perf', `transitionend: ${e.propertyName} | elapsedTime:${e.elapsedTime.toFixed(2)}s`);
+}, true);
+
+// ---- 23. History / Navigation ----
+window.addEventListener('popstate', (e) => {
+  log('session', `popstate | state: ${e.state ? JSON.stringify(e.state).slice(0, 100) : 'null'} | location: ${location.href}`);
+});
+window.addEventListener('hashchange', (e) => {
+  log('session', `hashchange | old: ${e.oldURL.split('#')[1] || '(none)'} → new: ${e.newURL.split('#')[1] || '(none)'}`);
+});
+window.addEventListener('beforeinstallprompt', (e) => {
+  log('session', 'beforeinstallprompt — PWA install prompt available');
+});
+window.addEventListener('appinstalled', () => {
+  log('ok', 'appinstalled — PWA was successfully installed');
+});
+
+// ---- 24. Print ----
+window.addEventListener('beforeprint', () => log('session', 'beforeprint — print dialog opening'));
+window.addEventListener('afterprint', () => log('session', 'afterprint — print dialog closed'));
+
+// ---- 25. Idle Detection ----
+if ('requestIdleCallback' in window) {
+  let idleLogScheduled = false;
+  function scheduleIdleLog() {
+    if (idleLogScheduled) return;
+    idleLogScheduled = true;
+    requestIdleCallback((deadline) => {
+      idleLogScheduled = false;
+      if (deadline.didTimeout) {
+        log('perf', `Idle callback timed out | timeRemaining: ${deadline.timeRemaining().toFixed(1)}ms`);
+      }
+    }, { timeout: 5000 });
+  }
+  setInterval(scheduleIdleLog, 30000);
+}
+
+// ---- 26. Storage Events (localStorage / sessionStorage) ----
+window.addEventListener('storage', (e) => {
+  log('session', `storage change | key: "${e.key}" | oldValue: "${(e.oldValue||'').slice(0, 50)}" | newValue: "${(e.newValue||'').slice(0, 50)}" | storageArea: ${e.storageArea === localStorage ? 'localStorage' : 'sessionStorage'} | url: ${e.url}`);
+});
+
+// ---- 27. Language / Locale Changes ----
+window.addEventListener('languagechange', () => {
+  log('session', `languagechange — new language: ${navigator.language} | languages: ${navigator.languages?.join(', ') || 'N/A'}`);
+});
+
+// ---- 28. Connection Changes ----
+if (navigator.connection) {
+  navigator.connection.addEventListener('change', () => {
+    STATE.connectionType = navigator.connection.effectiveType;
+    STATE.connectionDownlink = navigator.connection.downlink;
+    STATE.connectionRtt = navigator.connection.rtt;
+    log('session', `connection change | type: ${STATE.connectionType} | downlink: ${STATE.connectionDownlink}Mbps | rtt: ${STATE.connectionRtt}ms | saveData: ${navigator.connection.saveData}`);
+  });
+}
+
+// ---- 29. Gamepad ----
+window.addEventListener('gamepadconnected', (e) => {
+  log('user', `gamepad connected | id: "${e.gamepad.id}" | buttons: ${e.gamepad.buttons.length} | axes: ${e.gamepad.axes.length}`);
+});
+window.addEventListener('gamepaddisconnected', (e) => {
+  log('user', `gamepad disconnected | id: "${e.gamepad.id}"`);
+});
+
+// ---- 30. Mutation Observer (DOM changes within log panel only) ----
+if (window.MutationObserver) {
+  const mo = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      if (m.type === 'childList' && m.addedNodes.length > 2) {
+        // Log significant DOM batch changes only
+      }
+    }
+  });
+}
+
+// ---- 31. Intersection Observer (element visibility) ----
+if (window.IntersectionObserver) {
+  // Log when demo area enters/exits viewport
+  const demoWrapper = $('#demo-area-wrapper');
+  if (demoWrapper) {
+    new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          log('perf', 'Demo area visible in viewport');
+        }
+      }
+    }, { threshold: [0, 0.5, 1] }).observe(demoWrapper);
+  }
+}
+
+// ---- 32. Media Queries ----
+function checkMediaQueries() {
+  const queries = [
+    { name: 'prefers-color-scheme:dark', q: matchMedia('(prefers-color-scheme: dark)') },
+    { name: 'prefers-reduced-motion', q: matchMedia('(prefers-reduced-motion: reduce)') },
+    { name: 'prefers-contrast:high', q: matchMedia('(prefers-contrast: high)') },
+    { name: 'pointer:coarse', q: matchMedia('(pointer: coarse)') },
+    { name: 'hover:none', q: matchMedia('(hover: none)') },
+    { name: 'any-hover:none', q: matchMedia('(any-hover: none)') },
+  ];
+  queries.forEach(({name, q}) => {
+    log('session', `Media Query "${name}" = ${q.matches}`);
+  });
+}
+setTimeout(checkMediaQueries, 200);
+
+// ===================================================================
+// UI CONTROLS
+// ===================================================================
+
+// Filter
+filterInput.addEventListener('input', () => {
+  CFG.filter = filterInput.value;
+  renderLogs();
+});
+
+// Pause
+$('#btn-pause').addEventListener('click', function() {
+  CFG.paused = !CFG.paused;
+  this.textContent = CFG.paused ? '▶ Resume' : '⏯ Pause';
+  if (!CFG.paused) {
+    renderLogs();
+    logContainer.scrollTop = logContainer.scrollHeight;
+  }
+  log('user', `Logging ${CFG.paused ? 'PAUSED' : 'RESUMED'}`);
+});
+
+// Clear
+$('#btn-clear').addEventListener('click', clearLogs);
+
+// Export
+$('#btn-export').addEventListener('click', exportLogs);
+
+// Reset session
+$('#btn-reset').addEventListener('click', () => {
+  if (confirm('Reset session? All logs will be cleared and a new session ID generated.')) {
+    resetSession();
+  }
+});
+
+// Auto-scroll toggle
+$('#btn-autoscroll').addEventListener('click', function() {
+  CFG.autoScroll = !CFG.autoScroll;
+  this.textContent = CFG.autoScroll ? '📌 Auto-scroll ON' : '📌 Auto-scroll OFF';
+  this.classList.toggle('primary', CFG.autoScroll);
+  log('user', `Auto-scroll: ${CFG.autoScroll ? 'ON' : 'OFF'}`);
+});
+
+// Log limit buttons
+$('#btn-limit-1000').addEventListener('click', ()=>{ CFG.maxLogs=1000; $('#log-limit-label').textContent='1000'; log('user','Log limit set to 1000'); renderLogs(); });
+$('#btn-limit-5000').addEventListener('click', ()=>{ CFG.maxLogs=5000; $('#log-limit-label').textContent='5000'; log('user','Log limit set to 5000'); renderLogs(); });
+$('#btn-limit-nolimit').addEventListener('click', ()=>{ CFG.maxLogs=999999; $('#log-limit-label').textContent='∞'; log('user','Log limit removed'); renderLogs(); });
+
+// ---- Quick Event Fire Buttons ----
+$$('[data-fire]').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const action = this.dataset.fire;
+    const demoInput = $('#demo-input');
+    switch(action) {
+      case 'click': demoInput.click(); break;
+      case 'dblclick': demoInput.dispatchEvent(new MouseEvent('dblclick', {bubbles:true})); break;
+      case 'mousedown': demoInput.dispatchEvent(new MouseEvent('mousedown', {bubbles:true})); break;
+      case 'mouseup': demoInput.dispatchEvent(new MouseEvent('mouseup', {bubbles:true})); break;
+      case 'keydown-a': demoInput.focus(); demoInput.dispatchEvent(new KeyboardEvent('keydown', {key:'a',code:'KeyA',bubbles:true})); break;
+      case 'keyup-a': demoInput.dispatchEvent(new KeyboardEvent('keyup', {key:'a',code:'KeyA',bubbles:true})); break;
+      case 'focus-trigger': $('#demo-input2').focus(); break;
+      case 'blur-trigger': $('#demo-input2').blur(); break;
+      case 'scroll-trigger': window.scrollBy(0,50); logContainer.scrollBy(0,50); break;
+      case 'resize-trigger': log('info','Resize note: current inner='+window.innerWidth+'x'+window.innerHeight); break;
+      case 'network-fast': fetch('/').then(r=>r.text()).catch(()=>{}); break;
+      case 'network-slow': fetch('https://httpbin.org/delay/3').catch(()=>log('warn','Slow fetch may timeout')); break;
+      case 'network-404': fetch('/_nonexistent_page_404_test').catch(()=>{}); break;
+      case 'network-error': fetch('https://invalid.domain.that.does.not.exist.test').catch(()=>{}); break;
+      case 'storage-set': localStorage.setItem('_th_test', Date.now()); log('user','localStorage set: _th_test'); break;
+      case 'storage-get': log('user',`localStorage get: _th_test = ${localStorage.getItem('_th_test') || '(null)'}`); break;
+      case 'storage-remove': localStorage.removeItem('_th_test'); log('user','localStorage removed: _th_test'); break;
+      case 'rejection': Promise.reject(new Error('Test unhandled rejection')); break;
+      case 'animation': { const el=document.createElement('div');el.style.cssText='animation:spin 0.5s;position:fixed;left:0;top:0;';document.body.appendChild(el);setTimeout(()=>el.remove(),600); break; }
+      case 'transition': { const el=document.createElement('div');el.style.cssText='transition:opacity 0.3s;opacity:1;position:fixed;left:0;top:0;width:10px;height:10px;';document.body.appendChild(el);requestAnimationFrame(()=>{el.style.opacity='0';setTimeout(()=>el.remove(),400);}); break; }
+      case 'fullscreen': { if(!document.fullscreenElement){document.documentElement.requestFullscreen().catch(()=>{});}else{document.exitFullscreen();} break; }
+      case 'clipboard-copy': navigator.clipboard?.writeText('Test clipboard ' + Date.now()).then(()=>log('ok','Clipboard write successful')).catch(()=>log('warn','Clipboard write failed')); break;
+      case 'selection': { const sel=window.getSelection(); const r=document.createRange(); r.selectNodeContents($('#demo-input')); sel.removeAllRanges(); sel.addRange(r); break; }
+      case 'pointer-lock': { if(!document.pointerLockElement){logContainer.requestPointerLock();}else{document.exitPointerLock();} break; }
+    }
+  });
+});
+
+// ---- Demo Buttons ----
+$('#demo-err-btn').addEventListener('click', () => { throw new Error('Manual test error triggered!'); });
+$('#demo-dbl-btn').addEventListener('dblclick', () => log('user', 'Double-click confirmed on demo button'));
+$('#demo-fetch-btn').addEventListener('click', async () => {
+  try { const r = await fetch('/'); log('ok', `Fetch test: status ${r.status}`); } catch(e) { log('error', `Fetch test failed: ${e.message}`); }
+});
+$('#demo-localstore-btn').addEventListener('click', () => {
+  const key = '_th_demo_store';
+  const prev = localStorage.getItem(key);
+  localStorage.setItem(key, Date.now().toString());
+  log('user', `localStorage cycle: prev="${prev||'(none)'}" → new="${localStorage.getItem(key)}"`);
+});
+
+// ---- Drag Zone ----
+const dragZone = $('#drag-zone');
+if (dragZone) {
+  dragZone.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.onchange = () => { if(input.files[0]) log('user', `File selected via click: "${input.files[0].name}" (${input.files[0].size}B)`); };
+    input.click();
+  });
+}
+
+// ---- Keyboard shortcuts ----
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 'e') {
+    e.preventDefault(); exportLogs();
+  }
+  if (e.ctrlKey && e.key === 'k') {
+    e.preventDefault(); clearLogs();
+  }
+  if (e.ctrlKey && e.key === 'l') {
+    e.preventDefault(); filterInput.focus(); filterInput.select();
+  }
+});
+
+// ===================================================================
+// INITIALIZATION
+// ===================================================================
+sessionIdEl.textContent = '#' + CFG.sessionId;
+$('#stat-total').textContent = '0';
+$('#stat-err').textContent = '0';
+$('#stat-warn').textContent = '0';
+
+// Log initial session info
+log('session', `Session started: ${CFG.sessionId}`);
+log('session', `Timestamp: ${new Date().toISOString()}`);
+log('session', `URL: ${location.href}`);
+log('session', `Referrer: ${document.referrer || '(none)'}`);
+log('session', `UA: ${STATE.userAgent}`);
+log('session', `Platform: ${STATE.platform} | Language: ${STATE.language} | Online: ${STATE.online} | Cookie: ${STATE.cookieEnabled}`);
+log('session', `Screen: ${STATE.screenW}x${STATE.screenH} (avail: ${screen.availWidth}x${screen.availHeight}) | Viewport: ${STATE.innerW}x${STATE.innerH} | DPR: ${STATE.dpr}`);
+log('session', `CPU Cores: ${STATE.hardwareConcurrency} | Device Memory: ${STATE.deviceMemory}GB | Max Touch: ${STATE.maxTouchPoints}`);
+if (STATE.connectionType) log('session', `Connection: ${STATE.connectionType} | Downlink: ${STATE.connectionDownlink}Mbps | RTT: ${STATE.connectionRtt}ms | saveData: ${navigator.connection?.saveData || false}`);
+log('session', `TimeZone: ${Intl.DateTimeFormat().resolvedOptions().timeZone} | Locale: ${Intl.DateTimeFormat().resolvedOptions().locale}`);
+log('session', `Do Not Track: ${navigator.doNotTrack || 'unspecified'} | PDF Viewer: ${navigator.pdfViewerEnabled ?? 'unknown'} | WebDriver: ${navigator.webdriver}`);
+log('session', `Permissions API: ${!!navigator.permissions} | ServiceWorker: ${!!navigator.serviceWorker} | SharedWorker: ${!!window.SharedWorker}`);
+log('session', `WebSocket: ${!!window.WebSocket} | WebRTC: ${!!window.RTCPeerConnection} | WebGL: ${(function(){try{var c=document.createElement('canvas');return!!(c.getContext('webgl')||c.getContext('experimental-webgl'));}catch(e){return false;}})()}`);
+log('ok', 'TrialHost debug engine initialized — watching all events');
+
+// After DOM is fully ready
+if (document.readyState === 'complete') {
+  log('session', 'Document already complete at init time');
+} else {
+  log('session', `Document readyState at init: ${document.readyState}`);
+}
+
+// Periodic heartbeat
+setInterval(() => {
+  const uptime = Math.round((Date.now() - CFG.sessionStart) / 1000);
+  log('perf', `♥ Heartbeat — session uptime: ${uptime}s | logs: ${STATE.stats.total} | memory: ${performance.memory ? Math.round(performance.memory.usedJSHeapSize/1048576)+'MB' : 'N/A'}`);
+}, 60000);
+
+// Log when page becomes idle
+if ('requestIdleCallback' in window) {
+  requestIdleCallback(() => {
+    log('perf', 'Page reached idle state');
+  });
+}
+
+})();
+</script>
+</body>
+</html>
