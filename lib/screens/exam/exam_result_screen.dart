@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
 import '../../models/exam_question.dart';
+import '../../services/audit_logger.dart';
 
 class ExamResultScreen extends StatelessWidget {
   final int score;
@@ -18,8 +19,13 @@ class ExamResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final _logger = AuditLogger();
     final t = Translations(Localizations.localeOf(context).languageCode);
     final passed = score >= config.passingScore;
+
+    _logger.logScreenView('ExamResult(${config.level})', p: {
+      'score': score, 'correct': correct, 'total': total, 'passed': passed,
+    });
 
     return Scaffold(
       appBar: AppBar(title: Text(t.get('exam_result')), automaticallyImplyLeading: false),
@@ -48,11 +54,18 @@ class ExamResultScreen extends StatelessWidget {
             ], centerSpaceRadius: 30))),
           const SizedBox(height: 20),
           SizedBox(width: double.infinity, child: ElevatedButton(
-            onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false),
+            onPressed: () {
+              _logger.logButton('ExamResult', 'Home');
+              Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+            },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 16)),
             child: Text(t.get('home'), style: const TextStyle(fontSize: 16)))),
           const SizedBox(height: 12),
-          TextButton(onPressed: () => Navigator.pop(context),
+          TextButton(onPressed: () {
+            _logger.logButton('ExamResult', 'Review');
+            _logger.logEdge('ExamResult', 'review-button — pops to exam home, not back to quiz');
+            Navigator.pop(context);
+          },
             child: Text(t.get('review') + ' ' + t.get('flashcards').toLowerCase())),
         ])),
     );

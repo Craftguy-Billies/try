@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../i18n/translations.dart';
+import '../services/audit_logger.dart';
 
 class AppDrawer extends StatelessWidget {
   final String currentRoute;
@@ -9,7 +10,10 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final _logger = AuditLogger();
     final t = Translations(Localizations.localeOf(context).languageCode);
+    _logger.logLifecycle('AppDrawer', 'open', data: {'route': currentRoute});
+
     return Drawer(
       child: SafeArea(
         child: Column(children: [
@@ -46,6 +50,7 @@ class AppDrawer extends StatelessWidget {
   }
 
   Widget _drawerItem(BuildContext context, IconData icon, String title, String route, String current) {
+    final _logger = AuditLogger();
     final selected = route == current;
     return ListTile(
       leading: Icon(icon, color: selected ? AppColors.primary : AppColors.textSecondary),
@@ -55,9 +60,13 @@ class AppDrawer extends StatelessWidget {
       selectedTileColor: AppColors.primary.withAlpha(15),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       onTap: () {
+        _logger.logButton('Drawer', title, data: {'route': route, 'current': current, 'same': selected});
         Navigator.pop(context);
         if (route != current) {
+          _logger.logNavigate(current, route, method: 'drawer');
           Navigator.pushReplacementNamed(context, route);
+        } else {
+          _logger.logGuardSkip('Drawer', 'already-on-route', data: {'route': current});
         }
       },
     );

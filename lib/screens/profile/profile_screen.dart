@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import '../../services/audit_logger.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';

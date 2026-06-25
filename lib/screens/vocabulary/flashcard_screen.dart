@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
 import '../../models/vocabulary.dart';
+import '../../services/audit_logger.dart';
 import '../../services/audio_service.dart';
 import '../home/home_screen.dart';
 
@@ -15,6 +16,7 @@ class FlashcardScreen extends StatefulWidget {
 }
 
 class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProviderStateMixin {
+  final _logger = AuditLogger();
   int _index = 0;
   bool _showBack = false;
   late AnimationController _flipCtrl;
@@ -23,25 +25,63 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
   @override
   void initState() {
     super.initState();
+    _logger.logInit('Flashcard', data: {'wordCount': widget.words.length});
+    _logger.logScreenView('Flashcard', p: {'words': widget.words.length});
     _flipCtrl = AnimationController(duration: const Duration(milliseconds: 400), vsync: this);
     _flipAnim = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _flipCtrl, curve: Curves.easeInOut));
+    _flipCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed) _logger.logAnimationDone('Flashcard', 'flip-forward');
+      if (status == AnimationStatus.dismissed) _logger.logAnimationDone('Flashcard', 'flip-reverse');
+    });
   }
 
   @override
-  void dispose() { _flipCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _logger.logDispose('Flashcard', data: {'lastIndex': _index, 'total': widget.words.length});
+    _flipCtrl.dispose();
+    super.dispose();
+  }
 
-  void _flip() { if (_showBack) { _flipCtrl.reverse(); } else { _flipCtrl.forward(); } setState(() => _showBack = !_showBack); }
+  void _flip() {
+    final oldShowBack = _showBack;
+    if (_showBack) {
+      _logger.logAnimationStart('Flashcard', 'flip-reverse');
+      _flipCtrl.reverse();
+    } else {
+      _logger.logAnimationStart('Flashcard', 'flip-forward');
+      _flipCtrl.forward();
+    }
+    setState(() => _showBack = !_showBack);
+    _logger.logTap('Flashcard', 'card-flip', data: {'front→back': oldShowBack ? 'no' : 'yes'});
+  }
 
   void _next() {
     if (_index < widget.words.length - 1) {
+      final oldIdx = _index;
+      final completedWord = widget.words[_index];
       setState(() { _index++; _showBack = false; _flipCtrl.reset(); });
+      _logger.logStateChangeInt('Flashcard', 'index', oldIdx, _index);
       final progress = context.read<UserProgressProvider>();
-      progress.markWordComplete(widget.words[_index - 1].id, widget.words[_index - 1].category);
+      progress.markWordComplete(completedWord.id, completedWord.category);
+      _logger.logButton('Flashcard', 'Next', data: {'completed': completedWord.id, 'newIdx': _index});
+
+      if (_index >= widget.words.length - 1) {
+        _logger.logEdge('Flashcard', 'last-word-reached', data: {'index': _index, 'total': widget.words.length});
+      }
+    } else {
+      _logger.logGuard('Flashcard', 'next-at-end', data: {'index': _index, 'total': widget.words.length});
     }
   }
 
   void _prev() {
-    if (_index > 0) { setState(() { _index--; _showBack = false; _flipCtrl.reset(); }); }
+    if (_index > 0) {
+      final oldIdx = _index;
+      setState(() { _index--; _showBack = false; _flipCtrl.reset(); });
+      _logger.logStateChangeInt('Flashcard', 'index', oldIdx, _index);
+      _logger.logButton('Flashcard', 'Prev', data: {'newIdx': _index});
+    } else {
+      _logger.logGuard('Flashcard', 'prev-at-start');
+    }
   }
 
   @override
@@ -97,6 +137,7 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
             IconButton.filled(onPressed: _index > 0 ? _prev : null, icon: const Icon(Icons.arrow_back)),
             IconButton.filled(onPressed: () {
+              _logger.logButton('Flashcard', 'Audio:${word.french}');
               context.read<AudioService>().speak(word.french);
             }, icon: const Icon(Icons.volume_up), style: IconButton.styleFrom(backgroundColor: AppColors.accent)),
             IconButton.filled(onPressed: _index < widget.words.length - 1 ? _next : null, icon: const Icon(Icons.arrow_forward)),

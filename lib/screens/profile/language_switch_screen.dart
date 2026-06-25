@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import '../../services/audit_logger.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
 import '../../services/storage_service.dart';
@@ -9,7 +10,7 @@ class LanguageSwitchScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = Translations(Localizations.localeOf(context).languageCode);
+    final _logger = AuditLogger(); _logger.logScreenView('LanguageSwitch'); final t = Translations(Localizations.localeOf(context).languageCode);
     final current = Localizations.localeOf(context).languageCode;
 
     return Scaffold(
@@ -25,7 +26,7 @@ class LanguageSwitchScreen extends StatelessWidget {
               title: Text(lang.nativeName, style: TextStyle(fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
               subtitle: Text(lang.name),
               trailing: selected ? const Icon(Icons.check_circle, color: AppColors.success) : null,
-              onTap: selected ? null : () {
+              onTap: selected ? null : () { _logger.logTap('LanguageSwitch', '${lang.code}'); _logger.logEdge('LanguageSwitch', 'lang-change-not-calling-app-state');
                 StorageService().setLanguage(lang.code);
                 Navigator.pop(context, true);
               },

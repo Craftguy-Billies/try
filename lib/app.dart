@@ -27,7 +27,7 @@ class FrenchLearnApp extends StatefulWidget {
   State<FrenchLearnApp> createState() => FrenchLearnAppState();
 }
 
-class FrenchLearnAppState extends State<FrenchLearnApp> {
+class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObserver {
   Locale _locale = const Locale('en');
   bool _initialized = false;
   String _initialRoute = '/onboarding';
@@ -36,45 +36,84 @@ class FrenchLearnAppState extends State<FrenchLearnApp> {
   Locale get locale => _locale;
 
   void changeLanguage(String code) {
+    final old = _locale.languageCode;
     setState(() {
       _locale = AppLanguage.fromCode(code).locale;
     });
+    _logger.logStateChange('App', 'locale', old, code);
     _logger.logUserAction('Language changed to: $code');
   }
 
   @override
   void initState() {
     super.initState();
+    _logger.logInit('FrenchLearnApp');
+    WidgetsBinding.instance.addObserver(this);
     _initApp();
   }
 
+  @override
+  void dispose() {
+    _logger.logDispose('FrenchLearnApp');
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _logger.logLifecycle('App', 'lifecycle=${state.name}');
+  }
+
   Future<void> _initApp() async {
+    final sw = Stopwatch()..start();
+    _logger.logAsyncStart('App', 'init');
+
     try {
-      _logger.info('App', 'Initializing app...');
+      _logger.debug('App', 'Stage 1/5: StorageService.init');
       await StorageService().init();
+      _logger.debug('App', 'Stage 1/5: StorageService.init done');
+
       final lang = await StorageService().getLanguage();
       _locale = AppLanguage.fromCode(lang).locale;
-      _logger.info('App', 'Language: $lang');
+      _logger.info('App', 'Language resolved: $lang → ${_locale.languageCode}');
 
+      _logger.debug('App', 'Stage 2/5: AudioService.init');
       await AudioService().init();
-      await VocabularyService().init();
-      await ExamService().init();
+      _logger.debug('App', 'Stage 2/5: AudioService.init done');
 
+      _logger.debug('App', 'Stage 3/5: VocabularyService.init');
+      await VocabularyService().init();
+      _logger.debug('App', 'Stage 3/5: VocabularyService.init done');
+
+      _logger.debug('App', 'Stage 4/5: ExamService.init');
+      await ExamService().init();
+      _logger.debug('App', 'Stage 4/5: ExamService.init done');
+
+      _logger.debug('App', 'Stage 5/5: Onboarding check');
       final onboarded = await StorageService().isOnboardingCompleted();
       _initialRoute = onboarded ? '/home' : '/onboarding';
-      _logger.info('App', 'Initial route: $_initialRoute');
+      _logger.info('App', 'Onboarding completed: $onboarded → initial route: $_initialRoute');
 
       setState(() => _initialized = true);
-      _logger.info('App', 'App initialized successfully');
+      _logger.logAsyncDone('App', 'init', elapsed: sw.elapsed, data: {
+        'route': _initialRoute, 'locale': _locale.languageCode,
+        'onboarded': onboarded,
+      });
     } catch (e, stack) {
-      _logger.error('App', 'Init failed', e: e, s: stack);
+      _logger.logAsyncFail('App', 'init', e, stack, data: {'stage_elapsed_ms': sw.elapsedMilliseconds});
+      _logger.logRecover('App', 'init failure — proceeding to home');
       setState(() => _initialized = true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    _logger.logBuild('FrenchLearnApp', data: {
+      'initialized': _initialized, 'locale': _locale.languageCode, 'route': _initialRoute,
+    });
+
     if (!_initialized) {
+      _logger.debug('App', 'Rendering loading spinner (not initialized)');
       return MaterialApp(
         locale: _locale,
         localizationsDelegates: const [
@@ -86,9 +125,13 @@ class FrenchLearnAppState extends State<FrenchLearnApp> {
       );
     }
 
+    _logger.logProvider('creating', 'MultiProvider with 5 services');
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => UserProgressProvider()),
+        ChangeNotifierProvider(create: (_) {
+          _logger.logProvider('created', 'UserProgressProvider');
+          return UserProgressProvider();
+        }),
         Provider.value(value: AudioService()),
         Provider.value(value: VocabularyService()),
         Provider.value(value: ExamService()),
@@ -116,8 +159,11 @@ class FrenchLearnAppState extends State<FrenchLearnApp> {
             case '/phrases': page = const PhrasesScreen(); break;
             case '/profile': page = const ProfileScreen(); break;
             case '/settings': page = const SettingsScreen(); break;
-            default: page = const HomeScreen();
+            default:
+              _logger.logFallback('Router', 'Unknown route', '/home', data: {'requested': settings.name});
+              page = const HomeScreen();
           }
+          _logger.logNavigate('init', settings.name ?? '/', data: {'widget': page.runtimeType.toString()});
           return MaterialPageRoute(builder: (_) => page, settings: settings);
         },
       ),

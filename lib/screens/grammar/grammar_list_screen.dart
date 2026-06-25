@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
 import '../../data/grammar_data.dart';
+import '../../services/audit_logger.dart';
 import 'grammar_lesson_screen.dart';
 
 class GrammarListScreen extends StatelessWidget {
@@ -10,7 +11,10 @@ class GrammarListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final _logger = AuditLogger();
     final t = Translations(Localizations.localeOf(context).languageCode);
+    _logger.logScreenView('GrammarList', p: {'lessons': GrammarData.lessons.length});
+
     return Scaffold(
       appBar: AppBar(title: Text(t.get('grammar'))),
       body: ListView.builder(padding: const EdgeInsets.all(16),
@@ -27,7 +31,11 @@ class GrammarListScreen extends StatelessWidget {
               subtitle: Text(Localizations.localeOf(context).languageCode == 'fr' ? lesson.descriptionFr : lesson.descriptionEn,
                 style: TextStyle(color: AppColors.textSecondary)),
               trailing: const Icon(Icons.arrow_forward),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GrammarLessonScreen(lesson: lesson)))));
+              onTap: () {
+                _logger.logTap('GrammarList', 'lesson:${lesson.id}', data: {'title': lesson.titleEn});
+                _logger.logNavigate('GrammarList', 'GrammarLesson(${lesson.id})', method: 'push');
+                Navigator.push(context, MaterialPageRoute(builder: (_) => GrammarLessonScreen(lesson: lesson)));
+              }));
         }),
     );
   }

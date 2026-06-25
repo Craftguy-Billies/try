@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/grammar_lesson.dart';
+import '../../services/audit_logger.dart';
 
 class GrammarLessonScreen extends StatefulWidget {
   final GrammarLesson lesson;
@@ -11,9 +12,19 @@ class GrammarLessonScreen extends StatefulWidget {
 }
 
 class _GrammarLessonScreenState extends State<GrammarLessonScreen> {
+  final _logger = AuditLogger();
   int _exerciseIdx = 0;
   String? _selected;
   bool? _correct;
+
+  @override
+  void initState() {
+    super.initState();
+    _logger.logInit('GrammarLesson', data: {
+      'lessonId': widget.lesson.id, 'exercises': widget.lesson.exercises.length,
+    });
+    _logger.logScreenView('GrammarLesson(${widget.lesson.id})');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +54,11 @@ class _GrammarLessonScreenState extends State<GrammarLessonScreen> {
             const SizedBox(height: 8),
             Text('Exercises', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
             const SizedBox(height: 12),
-            Card(child: Padding(padding: const EdgeInsets.all(20),
+            if (_exerciseIdx >= lesson.exercises.length)
+              Card(child: Padding(padding: const EdgeInsets.all(20),
+                child: Text('All ${lesson.exercises.length} exercises completed!', textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.success))))
+            else Card(child: Padding(padding: const EdgeInsets.all(20),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(isFr ? lesson.exercises[_exerciseIdx].questionFr : lesson.exercises[_exerciseIdx].questionEn,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
@@ -52,6 +67,16 @@ class _GrammarLessonScreenState extends State<GrammarLessonScreen> {
                   child: InkWell(onTap: _selected == null ? () {
                     final isCorrect = opt == lesson.exercises[_exerciseIdx].correctAnswer;
                     setState(() { _selected = opt; _correct = isCorrect; });
+                    _logger.logTap('GrammarLesson', 'exercise:${_exerciseIdx}', data: {
+                      'selected': opt, 'correct': isCorrect,
+                    });
+                    if (isCorrect) {
+                      _logger.info('GrammarLesson', 'exercise $_exerciseIdx: CORRECT');
+                    } else {
+                      _logger.warn('GrammarLesson', 'exercise $_exerciseIdx: WRONG', data: {
+                        'selected': opt, 'expected': lesson.exercises[_exerciseIdx].correctAnswer,
+                      });
+                    }
                   } : null, borderRadius: BorderRadius.circular(8),
                     child: Container(width: double.infinity, padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
@@ -68,7 +93,10 @@ class _GrammarLessonScreenState extends State<GrammarLessonScreen> {
                     Expanded(child: Text(_correct == true ? 'Correct!' : 'Try again. Correct answer: ${lesson.exercises[_exerciseIdx].correctAnswer}',
                       style: TextStyle(color: _correct == true ? AppColors.success : AppColors.error))),
                     if (_exerciseIdx < lesson.exercises.length - 1)
-                      TextButton(onPressed: () => setState(() { _exerciseIdx++; _selected = null; _correct = null; }),
+                      TextButton(onPressed: () {
+                        _logger.logButton('GrammarLesson', 'NextExercise', data: {'from': _exerciseIdx, 'to': _exerciseIdx + 1});
+                        setState(() { _exerciseIdx++; _selected = null; _correct = null; });
+                      },
                         child: const Text('Next')),
                   ]),
                 ],

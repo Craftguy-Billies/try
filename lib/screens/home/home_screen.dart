@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
+import '../../services/audit_logger.dart';
 import '../../services/vocabulary_service.dart';
 import '../../widgets/progress_card.dart';
 import '../../widgets/category_card.dart';
@@ -15,9 +16,15 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final _logger = AuditLogger();
     final t = Translations(Localizations.localeOf(context).languageCode);
     final vocab = context.watch<VocabularyService>();
     final progress = context.watch<UserProgressProvider>();
+
+    _logger.logScreenView('Home', p: {
+      'words': progress.totalWordsLearned, 'streak': progress.currentStreak,
+      'categories': vocab.categories.length,
+    });
 
     return Scaffold(
       appBar: AppBar(title: Text(t.get('app_name'))),
@@ -40,21 +47,34 @@ class HomeScreen extends StatelessWidget {
               final catProgress = progress.getCategoryProgress(cat.id, cat.wordCount);
               return CategoryCard(categoryId: cat.id, nameKey: cat.nameKey, iconName: cat.icon,
                 color: color, wordCount: cat.wordCount, progress: catProgress,
-                onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                  builder: (_) => VocabularyListScreen(categoryId: cat.id, categoryName: t.get(cat.nameKey)))));
+                onTap: () {
+                  _logger.logTap('Home', 'CategoryCard(${cat.id})');
+                  _logger.logNavigate('Home', 'VocabularyList(${cat.id})', method: 'push');
+                  Navigator.push(ctx, MaterialPageRoute(
+                    builder: (_) => VocabularyListScreen(categoryId: cat.id, categoryName: t.get(cat.nameKey))));
+                });
             }),
           const SizedBox(height: 24),
           Text(t.get('quick_actions'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
           const SizedBox(height: 14),
           Row(children: [
             Expanded(child: _QuickAction(icon: Icons.menu_book, label: t.get('vocabulary'), color: AppColors.primary,
-              onTap: () => Navigator.pushNamed(context, '/vocabulary'))),
+              onTap: () {
+                _logger.logButton('Home', 'QuickAction:Vocabulary');
+                Navigator.pushNamed(context, '/vocabulary');
+              })),
             const SizedBox(width: 12),
             Expanded(child: _QuickAction(icon: Icons.quiz, label: t.get('exam'), color: AppColors.accent,
-              onTap: () => Navigator.pushNamed(context, '/exam'))),
+              onTap: () {
+                _logger.logButton('Home', 'QuickAction:Exam');
+                Navigator.pushNamed(context, '/exam');
+              })),
             const SizedBox(width: 12),
             Expanded(child: _QuickAction(icon: Icons.auto_stories, label: t.get('grammar'), color: AppColors.success,
-              onTap: () => Navigator.pushNamed(context, '/grammar'))),
+              onTap: () {
+                _logger.logButton('Home', 'QuickAction:Grammar');
+                Navigator.pushNamed(context, '/grammar');
+              })),
           ]),
           const SizedBox(height: 20),
         ]),
@@ -85,6 +105,7 @@ class _QuickAction extends StatelessWidget {
 }
 
 class UserProgressProvider extends ChangeNotifier {
+  final _logger = AuditLogger();
   int totalWordsLearned = 0;
   int totalMinutesPracticed = 0;
   int currentStreak = 0;
@@ -98,22 +119,45 @@ class UserProgressProvider extends ChangeNotifier {
   }
 
   void markWordComplete(String wordId, String categoryId) {
-    if (completedWords[wordId] == true) return;
+    if (completedWords[wordId] == true) {
+      _logger.logGuardSkip('Progress', 'word-already-complete', data: {'wordId': wordId});
+      return;
+    }
+    final oldWords = totalWordsLearned;
+    final oldStreak = currentStreak;
     completedWords[wordId] = true;
     totalWordsLearned++;
     categoryProgress[categoryId] = (categoryProgress[categoryId] ?? 0) + 1;
     totalMinutesPracticed++;
     updateStreak();
     notifyListeners();
+    _logger.logStateChangeInt('Progress', 'totalWordsLearned', oldWords, totalWordsLearned);
+    _logger.logStateChangeInt('Progress', 'currentStreak', oldStreak, currentStreak);
+    _logger.debug('Progress', 'markWordComplete', data: {
+      'wordId': wordId, 'categoryId': categoryId, 'catProgress': categoryProgress[categoryId],
+    });
   }
 
   void updateStreak() {
     currentStreak = (currentStreak + 1);
+    _logger.debug('Progress', 'updateStreak → $currentStreak (simplistic — no date check)');
     notifyListeners();
   }
 
   void addPracticeTime(int minutes) {
+    final old = totalMinutesPracticed;
     totalMinutesPracticed += minutes;
+    _logger.logStateChangeInt('Progress', 'totalMinutesPracticed', old, totalMinutesPracticed);
+    notifyListeners();
+  }
+
+  void resetAll() {
+    _logger.logDataClear('ProgressProvider (in-memory)');
+    totalWordsLearned = 0;
+    totalMinutesPracticed = 0;
+    currentStreak = 0;
+    categoryProgress.clear();
+    completedWords.clear();
     notifyListeners();
   }
 }

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/vocabulary.dart';
+import '../../services/audit_logger.dart';
 import '../../services/audio_service.dart';
 import 'package:provider/provider.dart';
 
@@ -11,6 +12,9 @@ class WordDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final _logger = AuditLogger();
+    _logger.logScreenView('WordDetail(${word.id})', p: {'word': word.french});
+
     return Scaffold(
       appBar: AppBar(title: Text(word.french)),
       body: SingleChildScrollView(
@@ -26,7 +30,10 @@ class WordDetailScreen extends StatelessWidget {
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             Text(word.french, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800)),
             const SizedBox(width: 12),
-            IconButton.filled(onPressed: () => context.read<AudioService>().speak(word.french),
+            IconButton.filled(onPressed: () {
+              _logger.logButton('WordDetail', 'Audio:${word.french}');
+              context.read<AudioService>().speak(word.french);
+            },
               icon: const Icon(Icons.volume_up), style: IconButton.styleFrom(backgroundColor: AppColors.accent)),
           ]),
           if (word.pronunciation != null) ...[

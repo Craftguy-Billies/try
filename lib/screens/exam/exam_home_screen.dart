@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
+import '../../services/audit_logger.dart';
 import '../../services/exam_service.dart';
 import 'exam_quiz_screen.dart';
 
@@ -10,7 +11,10 @@ class ExamHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final _logger = AuditLogger();
     final t = Translations(Localizations.localeOf(context).languageCode);
+    _logger.logScreenView('ExamHome');
+
     return Scaffold(
       appBar: AppBar(title: Text(t.get('exam'))),
       body: ListView(padding: const EdgeInsets.all(16), children: [
@@ -34,8 +38,12 @@ class ExamHomeScreen extends StatelessWidget {
             title: Text(config.level, style: const TextStyle(fontWeight: FontWeight.w700)),
             subtitle: Text('${config.questionCount} questions • ${config.timeMinutes} min • ${config.passingScore}% ${t.get('passed').toLowerCase()}'),
             trailing: const Icon(Icons.arrow_forward),
-            onTap: () => Navigator.push(context, MaterialPageRoute(
-              builder: (_) => ExamQuizScreen(config: config))),
+            onTap: () {
+              _logger.logButton('ExamHome', 'Select:${config.level}');
+              _logger.logNavigate('ExamHome', 'ExamQuiz(${config.level})', method: 'push');
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => ExamQuizScreen(config: config)));
+            },
           ))),
       ]),
     );

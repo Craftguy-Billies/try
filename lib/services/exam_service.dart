@@ -24,22 +24,50 @@ class ExamService {
   ];
 
   Future<void> init() async {
-    _logger.info('Exam', 'Initializing');
+    _logger.logAsyncStart('Exam', 'init');
     _all = ExamData.allQuestions;
-    _logger.info('Exam', 'Loaded ${_all!.length} questions');
+    _logger.logDataLoad('ExamData', _all!.length);
+    _logger.logAsyncDone('Exam', 'init', data: {
+      'questions': _all!.length, 'configs': configs.length,
+    });
   }
 
   List<ExamQuestion> generateExam(ExamConfig config) {
+    _logger.logAsyncStart('Exam', 'generateExam', data: {
+      'level': config.level, 'target_count': config.questionCount,
+      'categories': config.categories, 'time_min': config.timeMinutes,
+    });
+
+    final diffTarget = _diffFor(config.level);
     var pool = _all!.where((q) =>
       config.categories.contains(q.category) &&
-      q.difficulty <= _diffFor(config.level)).toList();
+      q.difficulty <= diffTarget).toList();
+
+    _logger.debug('Exam', 'generateExam: filtered pool=${pool.length} (target=${config.questionCount})', data: {
+      'diff_target': diffTarget, 'total_all': _all!.length,
+    });
 
     if (pool.length < config.questionCount) {
-      _logger.warn('Exam', 'Not enough questions, using all');
+      _logger.logEdge('Exam', 'insufficient-questions', data: {
+        'pool': pool.length, 'needed': config.questionCount, 'level': config.level,
+      });
+      _logger.logFallback('Exam', 'insufficient filtered questions', 'using all questions as fallback');
       pool = _all!.toList();
+      _logger.debug('Exam', 'generateExam: fallback pool=${pool.length}');
     }
+
+    if (pool.isEmpty) {
+      _logger.logEdge('Exam', 'completely-empty-pool — this should never happen');
+      _logger.logAsyncDone('Exam', 'generateExam (empty)', data: {'count': 0});
+      return [];
+    }
+
     pool.shuffle(_random);
-    return pool.take(config.questionCount).toList();
+    final result = pool.take(config.questionCount).toList();
+    _logger.logAsyncDone('Exam', 'generateExam', data: {
+      'count': result.length, 'pool_available': pool.length,
+    });
+    return result;
   }
 
   int _diffFor(String level) {

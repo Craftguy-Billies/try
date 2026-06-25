@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
 import '../../models/vocabulary.dart';
+import '../../services/audit_logger.dart';
 import '../../services/vocabulary_service.dart';
 import 'flashcard_screen.dart';
 import 'word_detail_screen.dart';
@@ -17,8 +18,24 @@ class VocabularyListScreen extends StatefulWidget {
 }
 
 class _VocabularyListScreenState extends State<VocabularyListScreen> {
+  final _logger = AuditLogger();
   String _searchQuery = '';
   int _difficultyFilter = 0; // 0 = all
+
+  @override
+  void initState() {
+    super.initState();
+    _logger.logInit('VocabularyList', data: {
+      'categoryId': widget.categoryId, 'categoryName': widget.categoryName,
+    });
+    _logger.logScreenView('VocabularyList', p: {'category': widget.categoryName});
+  }
+
+  @override
+  void dispose() {
+    _logger.logDispose('VocabularyList', data: {'searchQuery': _searchQuery, 'filter': _difficultyFilter});
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,8 +53,14 @@ class _VocabularyListScreenState extends State<VocabularyListScreen> {
         Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: TextField(
             decoration: InputDecoration(hintText: t.get('search'), prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _searchQuery = '')) : null),
-            onChanged: (v) => setState(() => _searchQuery = v))),
+              suffixIcon: _searchQuery.isNotEmpty ? IconButton(icon: const Icon(Icons.clear), onPressed: () {
+                _logger.logButton('VocabularyList', 'ClearSearch');
+                setState(() => _searchQuery = '');
+              }) : null),
+            onChanged: (v) {
+              _logger.logSearch('VocabularyList', v, results: null);
+              setState(() => _searchQuery = v);
+            })),
         SingleChildScrollView(scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(children: [0, 1, 2, 3, 4].map((d) {
@@ -45,7 +68,11 @@ class _VocabularyListScreenState extends State<VocabularyListScreen> {
               child: FilterChip(
                 label: Text(d == 0 ? t.get('all') : VocabularyWord.difficultyLabel(d)),
                 selected: _difficultyFilter == d,
-                onSelected: (v) => setState(() => _difficultyFilter = v ? d : 0),
+                onSelected: (v) {
+                  final newVal = v ? d : 0;
+                  _logger.logFilter('VocabularyList', 'difficulty=${VocabularyWord.difficultyLabel(d)}', results: null);
+                  setState(() => _difficultyFilter = newVal);
+                },
                 selectedColor: AppColors.primary.withAlpha(40),
                 checkmarkColor: AppColors.primary));
           }).toList())),
@@ -55,12 +82,21 @@ class _VocabularyListScreenState extends State<VocabularyListScreen> {
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             TextButton.icon(icon: const Icon(Icons.stacked_bar_chart, size: 18),
               label: Text(t.get('flashcards')), onPressed: () {
+                _logger.logButton('VocabularyList', 'Flashcards', data: {'wordCount': words.length});
+                _logger.logNavigate('VocabularyList', 'FlashcardScreen', method: 'push');
                 Navigator.push(context, MaterialPageRoute(
                   builder: (_) => FlashcardScreen(words: words)));
               }),
           ])),
-        Expanded(child: words.isEmpty ? Center(child: Text(t.get('no_data'),
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 16))) : ListView.builder(
+        Expanded(child: words.isEmpty
+          ? Builder(builder: (ctx) {
+              _logger.logEdge('VocabularyList', 'empty-word-list', data: {
+                'search': _searchQuery, 'filter': _difficultyFilter, 'category': widget.categoryId,
+              });
+              return Center(child: Text(t.get('no_data'),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 16)));
+            })
+          : ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: words.length, itemBuilder: (ctx, i) {
             final word = words[i];
@@ -74,8 +110,12 @@ class _VocabularyListScreenState extends State<VocabularyListScreen> {
                 subtitle: Text('${word.english}  •  ${word.partOfSpeech}',
                   style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => WordDetailScreen(word: word))),
+                onTap: () {
+                  _logger.logTap('VocabularyList', 'word:${word.id} (${word.french})');
+                  _logger.logNavigate('VocabularyList', 'WordDetail(${word.id})', method: 'push');
+                  Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => WordDetailScreen(word: word)));
+                },
               ));
           })),
       ]),

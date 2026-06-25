@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/phrase.dart';
+import '../../services/audit_logger.dart';
 import '../../services/audio_service.dart';
 import 'package:provider/provider.dart';
 
@@ -11,7 +12,10 @@ class ConversationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final _logger = AuditLogger();
     final isFr = Localizations.localeOf(context).languageCode == 'fr';
+    _logger.logScreenView('Conversation(${conversation.id})', p: {'lines': conversation.lines.length});
+
     return Scaffold(
       appBar: AppBar(title: Text(isFr ? conversation.titleFr : conversation.titleEn)),
       body: Column(children: [
@@ -37,7 +41,10 @@ class ConversationScreen extends StatelessWidget {
                     ]))),
                   const SizedBox(width: 4),
                   IconButton(icon: const Icon(Icons.volume_up, size: 20),
-                    onPressed: () => context.read<AudioService>().speak(line.french)),
+                    onPressed: () {
+                      _logger.logButton('Conversation', 'Audio:line$i', data: {'speaker': line.speaker});
+                      context.read<AudioService>().speak(line.french);
+                    }),
                 ]),
               ]));
           })),

@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
 import '../../data/phrase_data.dart';
 import '../../models/phrase.dart';
+import '../../services/audit_logger.dart';
 import '../../services/audio_service.dart';
 import 'package:provider/provider.dart';
 import 'conversation_screen.dart';
@@ -13,7 +14,9 @@ class PhrasesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final _logger = AuditLogger();
     final t = Translations(Localizations.localeOf(context).languageCode);
+    _logger.logScreenView('Phrases');
 
     return Scaffold(
       appBar: AppBar(title: Text(t.get('phrases'))),
@@ -32,8 +35,12 @@ class PhrasesScreen extends StatelessWidget {
             subtitle: Text(Localizations.localeOf(context).languageCode == 'fr' ? conv.scenarioFr : conv.scenarioEn,
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
             trailing: const Icon(Icons.arrow_forward),
-            onTap: () => Navigator.push(context, MaterialPageRoute(
-              builder: (_) => ConversationScreen(conversation: conv))),
+            onTap: () {
+              _logger.logTap('Phrases', 'conversation:${conv.id}');
+              _logger.logNavigate('Phrases', 'Conversation(${conv.id})', method: 'push');
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => ConversationScreen(conversation: conv)));
+            },
           ))),
         const SizedBox(height: 20),
         ..._phraseSections(context),
@@ -42,7 +49,6 @@ class PhrasesScreen extends StatelessWidget {
   }
 
   List<Widget> _phraseSections(BuildContext context) {
-    
     return [
       _section(context, 'Greetings', PhraseData.greetings),
       _section(context, 'Dining', PhraseData.dining),
@@ -54,6 +60,7 @@ class PhrasesScreen extends StatelessWidget {
   }
 
   Widget _section(BuildContext context, String title, List<Phrase> phrases) {
+    final _logger = AuditLogger();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
       const SizedBox(height: 8),
@@ -62,7 +69,10 @@ class PhrasesScreen extends StatelessWidget {
           title: Text(p.french, style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: Text(p.english + (p.formality != null ? '  2022  ${p.formality}' : '')),
           trailing: IconButton(icon: const Icon(Icons.volume_up, size: 20),
-            onPressed: () => context.read<AudioService>().speak(p.french)),
+            onPressed: () {
+              _logger.logButton('Phrases', 'Audio:$title', data: {'text': p.french});
+              context.read<AudioService>().speak(p.french);
+            }),
         ))),
       const SizedBox(height: 16),
     ]);

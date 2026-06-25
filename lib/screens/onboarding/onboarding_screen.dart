@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
+import '../../services/audit_logger.dart';
+import '../../services/storage_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -10,6 +12,7 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  final _logger = AuditLogger();
   final _pageController = PageController();
   int _currentPage = 0;
   final int _totalPages = 4;
@@ -22,7 +25,44 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
 
   @override
-  void dispose() { _pageController.dispose(); super.dispose(); }
+  void initState() {
+    super.initState();
+    _logger.logInit('Onboarding', data: {'pages': _totalPages});
+    _logger.logScreenView('Onboarding');
+  }
+
+  @override
+  void dispose() {
+    _logger.logDispose('Onboarding', data: {'last_page': _currentPage});
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onPageChanged(int i) {
+    final old = _currentPage;
+    setState(() => _currentPage = i);
+    _logger.logSwipe('Onboarding', from: old, to: i);
+    _logger.logStateChangeInt('Onboarding', 'currentPage', old, i);
+  }
+
+  void _handleSkip() {
+    _logger.logButton('Onboarding', 'Skip', data: {'from_page': _currentPage});
+    _logger.logEdge('Onboarding', 'User skipped onboarding — BUG: not persisted');
+    StorageService().setOnboardingCompleted();
+    Navigator.pushReplacementNamed(context, '/home');
+  }
+
+  void _handleNextOrStart() {
+    if (_currentPage < _totalPages - 1) {
+      _logger.logButton('Onboarding', 'Next', data: {'page': _currentPage, 'to': _currentPage + 1});
+      _pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+    } else {
+      _logger.logButton('Onboarding', 'Get Started', data: {'from_page': _currentPage});
+      _logger.logEdge('Onboarding', 'User completed onboarding — BUG: not persisted in original code');
+      StorageService().setOnboardingCompleted();
+      Navigator.pushReplacementNamed(context, '/home');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +72,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Column(children: [
           Expanded(flex: 3, child: PageView.builder(
             controller: _pageController, itemCount: _totalPages,
-            onPageChanged: (i) => setState(() => _currentPage = i),
+            onPageChanged: _onPageChanged,
             itemBuilder: (ctx, i) => _buildPage(ctx, _pages[i]),
           )),
           _buildDots(),
@@ -78,18 +118,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Row(children: [
         if (_currentPage < _totalPages - 1)
-          TextButton(onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+          TextButton(onPressed: _handleSkip,
             child: Text(t.get('skip'), style: TextStyle(color: AppColors.textSecondary)))
         else const Spacer(),
         const Spacer(),
         ElevatedButton(
-          onPressed: () {
-            if (_currentPage < _totalPages - 1) {
-              _pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
-            } else {
-              Navigator.pushReplacementNamed(context, '/home');
-            }
-          },
+          onPressed: _handleNextOrStart,
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary,
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
