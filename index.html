@@ -253,6 +253,7 @@ noscript div {
   var commentCounter = 0;   // tracks total comments ever created
   var activeComments = 0;   // tracks current visible comments
   var isSubmitting = false; // debounce guard for submit
+  var STORAGE_KEY = 'netease-comments'; // localStorage key for persistence
 
   function log(category, action, detail) {
     if (!DEBUG) return;
@@ -307,6 +308,113 @@ noscript div {
       buttonDisabled: document.getElementById('btn1') ? document.getElementById('btn1').disabled : 'btn1-null',
       textareaValue: document.getElementById('txt') ? document.getElementById('txt').value.substring(0, 50) : 'txt-null'
     });
+  }
+
+  /* ================================================================
+   *  PERSISTENCE: localStorage save/load
+   *  Serializes all visible comments to JSON so they survive refresh.
+   *  Falls back silently if localStorage is unavailable or full.
+   * ================================================================ */
+  function saveComments() {
+    try {
+      var items = document.querySelectorAll('#ul1 li:not(.empty-state)');
+      var comments = [];
+      for (var i = 0; i < items.length; i++) {
+        var nick = items[i].querySelector('.nicheng');
+        var text = items[i].querySelector('.pinglun');
+        var time = items[i].querySelector('.shijian span');
+        if (text) {
+          comments.push({
+            nickname: nick ? nick.textContent : '指尖微凉*',
+            text: text.textContent || '',
+            dateStr: time ? time.textContent.replace('评论时间  ', '') : ''
+          });
+        }
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(comments));
+      log('STORAGE', 'saved ' + comments.length + ' comments to localStorage');
+    } catch(e) {
+      logError('STORAGE', 'save failed (storage full or unavailable)', e);
+    }
+  }
+
+  function loadComments() {
+    try {
+      var data = localStorage.getItem(STORAGE_KEY);
+      if (!data) return [];
+      var parsed = JSON.parse(data);
+      if (!Array.isArray(parsed)) return [];
+      log('STORAGE', 'loaded ' + parsed.length + ' comments from localStorage');
+      return parsed;
+    } catch(e) {
+      logError('STORAGE', 'load failed', e);
+      return [];
+    }
+  }
+
+  function renderStoredComment(comment) {
+    var oUl1 = document.getElementById('ul1');
+    if (!oUl1) return;
+
+    var safeNickname = sanitize(comment.nickname || '指尖微凉*');
+    var safeText = sanitize(comment.text || '');
+    var safeDate = comment.dateStr || getDateString();
+
+    var oBox = document.createElement('div');
+    if (!oBox) return;
+    oBox.className = 'box';
+
+    var avatar = document.createElement('div');
+    avatar.className = 'touxiang';
+    avatar.textContent = '🎵';
+    avatar.setAttribute('aria-hidden', 'true');
+    oBox.appendChild(avatar);
+
+    var nickDiv = document.createElement('div');
+    nickDiv.className = 'nicheng';
+    nickDiv.textContent = safeNickname;
+    oBox.appendChild(nickDiv);
+
+    var commentDiv = document.createElement('div');
+    commentDiv.className = 'pinglun';
+    commentDiv.textContent = safeText;
+    oBox.appendChild(commentDiv);
+
+    var timeDiv = document.createElement('div');
+    timeDiv.className = 'shijian';
+
+    var timeSpan = document.createElement('span');
+    timeSpan.textContent = '评论时间  ' + safeDate;
+    timeDiv.appendChild(timeSpan);
+
+    var deleteLink = document.createElement('a');
+    deleteLink.className = 'delete-link';
+    deleteLink.href = 'javascript:void(0)';
+    deleteLink.textContent = '删除';
+    deleteLink.setAttribute('role', 'button');
+    deleteLink.setAttribute('aria-label', '删除这条评论');
+    deleteLink.setAttribute('tabindex', '0');
+
+    deleteLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      deleteCommentBox(oBox);
+    });
+    deleteLink.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        deleteCommentBox(oBox);
+      }
+    });
+
+    timeDiv.appendChild(deleteLink);
+    oBox.appendChild(timeDiv);
+
+    var li = document.createElement('li');
+    li.appendChild(oBox);
+    oUl1.appendChild(li);
+
+    commentCounter++;
+    activeComments++;
   }
 
   /* ================================================================
@@ -663,6 +771,7 @@ noscript div {
       if (nickInput) nickInput.value = '';
       updateCharCount();
       showStatus('评论发表成功！', false);
+      saveComments();
 
       // ---- Focus back to textarea for next comment ----
       oTxt.focus();
@@ -747,6 +856,7 @@ noscript div {
             snapshotState('after deleteCommentBox');
 
             showStatus('评论已删除', false);
+            saveComments();
           } else {
             log('DELETE_BOX', 'box was already removed from DOM before timeout');
           }
@@ -767,6 +877,7 @@ noscript div {
           activeComments = Math.max(0, activeComments - 1);
           log('DELETE_BOX', 'forced immediate removal after error');
           updateEmptyState();
+          saveComments();
         }
       } catch(forceErr) {
         logError('DELETE_BOX', 'forced removal also failed', forceErr);
@@ -851,6 +962,13 @@ noscript div {
         }
       });
     }
+
+    // ---- Restore persisted comments from localStorage ----
+    var stored = loadComments();
+    for (var i = 0; i < stored.length; i++) {
+      renderStoredComment(stored[i]);
+    }
+    log('INIT', 'restored comments from storage', { count: stored.length });
 
     // ---- Initialize empty state ----
     updateEmptyState();
