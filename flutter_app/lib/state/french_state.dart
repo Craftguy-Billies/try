@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/vocab_item.dart';
 import '../data/french_vocab.dart';
 import 'app_state.dart';
@@ -7,6 +9,10 @@ import 'app_state.dart';
 enum QuizMode { frenchToEnglish, englishToFrench, multipleChoice }
 
 class FrenchState extends ChangeNotifier {
+  static const _keyVocab = 'french_vocab';
+  static const _keyStats = 'french_stats';
+  static const _keyStudyDays = 'french_study_days';
+
   final Map<String, VocabItem> _vocab = {};
   final Random _rng = Random();
 
@@ -25,7 +31,7 @@ class FrenchState extends ChangeNotifier {
   int _wordsLearned = 0;
   int get wordsLearned => _wordsLearned;
 
-  int _dailyGoal = 50;
+  final int _dailyGoal = 50;
   int get dailyGoal => _dailyGoal;
 
   DateTime _lastStudyDate = DateTime.now();
@@ -56,12 +62,95 @@ class FrenchState extends ChangeNotifier {
   int _dailyWordsSeen = 0;
   int get dailyWordsSeen => _dailyWordsSeen;
 
-  static const int _maxDailyReviews = 50;
   static const int _quizOptionCount = 4;
 
   FrenchState() {
     _initVocab();
     _checkDailyReset();
+  }
+
+  // ---- Persistence ----
+  Future<void> load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Restore vocab progress
+      final vocabJson = prefs.getString(_keyVocab);
+      if (vocabJson != null) {
+        final List<dynamic> data = jsonDecode(vocabJson);
+        for (final entry in data) {
+          final item = VocabItem.fromJson(entry as Map<String, dynamic>);
+          if (_vocab.containsKey(item.id)) {
+            final existing = _vocab[item.id]!;
+            existing.level = item.level;
+            existing.correctCount = item.correctCount;
+            existing.incorrectCount = item.incorrectCount;
+            existing.streak = item.streak;
+            existing.nextReview = item.nextReview;
+          }
+        }
+      }
+
+      // Restore stats
+      final statsJson = prefs.getString(_keyStats);
+      if (statsJson != null) {
+        final Map<String, dynamic> stats = jsonDecode(statsJson) as Map<String, dynamic>;
+        _dailyXP = stats['dailyXP'] ?? 0;
+        _totalXP = stats['totalXP'] ?? 0;
+        _streak = stats['streak'] ?? 0;
+        _wordsLearned = stats['wordsLearned'] ?? 0;
+        _quizCorrect = stats['quizCorrect'] ?? 0;
+        _quizTotal = stats['quizTotal'] ?? 0;
+        if (stats['lastStudyDate'] != null) {
+          _lastStudyDate = DateTime.parse(stats['lastStudyDate'] as String);
+        }
+      }
+
+      // Restore study days
+      final daysJson = prefs.getString(_keyStudyDays);
+      if (daysJson != null) {
+        final List<dynamic> days = jsonDecode(daysJson);
+        _studyDays.clear();
+        for (final d in days) {
+          _studyDays.add(DateTime.parse(d as String));
+        }
+      }
+
+      _updateCategoryProgress();
+      _checkDailyReset();
+      appState.log('FRENCH', 'Progress loaded: $_totalXP XP, $_streak day streak, $_wordsLearned words', color: Colors.teal);
+      notifyListeners();
+    } catch (e) {
+      appState.log('FRENCH', 'Failed to load progress: $e', color: Colors.red);
+    }
+  }
+
+  Future<void> _save() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Save vocab progress (only fields that change)
+      final vocabData = _vocab.values.map((v) => jsonEncode(v.toJson())).map((s) => jsonDecode(s)).toList();
+      await prefs.setString(_keyVocab, jsonEncode(vocabData));
+
+      // Save stats
+      final stats = {
+        'dailyXP': _dailyXP,
+        'totalXP': _totalXP,
+        'streak': _streak,
+        'wordsLearned': _wordsLearned,
+        'quizCorrect': _quizCorrect,
+        'quizTotal': _quizTotal,
+        'lastStudyDate': _lastStudyDate.toIso8601String(),
+      };
+      await prefs.setString(_keyStats, jsonEncode(stats));
+
+      // Save study days
+      final days = _studyDays.map((d) => d.toIso8601String()).toList();
+      await prefs.setString(_keyStudyDays, jsonEncode(days));
+    } catch (e) {
+      appState.log('FRENCH', 'Failed to save progress: $e', color: Colors.red);
+    }
   }
 
   void _initVocab() {
@@ -173,6 +262,7 @@ class FrenchState extends ChangeNotifier {
     _dailyWordsSeen++;
     _updateCategoryProgress();
     _lastStudyDate = DateTime.now();
+    _save();
     notifyListeners();
   }
 
@@ -310,6 +400,7 @@ class FrenchState extends ChangeNotifier {
     _currentQuizItem = null;
     _quizOptions = [];
     _updateCategoryProgress();
+    _save();
     appState.log('FRENCH', 'All progress reset', color: Colors.red);
     notifyListeners();
   }

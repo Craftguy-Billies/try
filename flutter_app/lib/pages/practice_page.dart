@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../state/french_state.dart';
-import '../state/app_state.dart';
 import '../models/vocab_item.dart';
 
 class PracticePage extends StatefulWidget {
@@ -107,7 +106,6 @@ class _PracticePageState extends State<PracticePage> {
   }
 
   Widget _buildQuiz(ColorScheme cs, VocabItem quizItem, List<VocabItem> options) {
-    final v = frenchState.allWords.firstWhere((w) => w.id == quizItem.id);
     return Column(
       children: [
         // Progress header
@@ -135,6 +133,10 @@ class _PracticePageState extends State<PracticePage> {
                         style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w800),
                         textAlign: TextAlign.center,
                       ),
+                      if (quizItem.ipa != null) ...[
+                        const SizedBox(height: 4),
+                        Text(quizItem.ipa!, style: TextStyle(fontSize: 15, color: cs.onSurface.withAlpha(100), fontStyle: FontStyle.italic)),
+                      ],
                       if (quizItem.gender != null) ...[
                         const SizedBox(height: 6),
                         Text(
@@ -257,7 +259,6 @@ class _PracticePageState extends State<PracticePage> {
   }
 
   Widget _buildProgressBar(ColorScheme cs) {
-    final total = frenchState.totalWords;
     final mastered = frenchState.masteredCount;
     final learning = frenchState.learningCount;
     final untried = frenchState.newCount;

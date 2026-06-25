@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../state/french_state.dart';
-import '../state/app_state.dart';
 import '../models/vocab_item.dart';
 
 class LearnPage extends StatefulWidget {
@@ -137,7 +136,6 @@ class _LearnPageState extends State<LearnPage> with SingleTickerProviderStateMix
 
   Widget _buildCard(ColorScheme cs) {
     final word = _currentWord!;
-    final v = frenchState.allWords.firstWhere((w) => w.id == word.id);
 
     return ListenableBuilder(
       listenable: frenchState,
@@ -149,7 +147,6 @@ class _LearnPageState extends State<LearnPage> with SingleTickerProviderStateMix
             child: AnimatedBuilder(
               animation: _flipAnim,
               builder: (context, child) {
-                final isFlipped = _flipAnim.value > 0.5;
                 return Transform(
                   alignment: Alignment.center,
                   transform: Matrix4.identity()
@@ -197,6 +194,10 @@ class _LearnPageState extends State<LearnPage> with SingleTickerProviderStateMix
             ),
           const SizedBox(height: 16),
           Text(word.french, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800, letterSpacing: 0.5), textAlign: TextAlign.center),
+          if (word.ipa != null) ...[
+            const SizedBox(height: 4),
+            Text(word.ipa!, style: TextStyle(fontSize: 15, color: cs.onSurface.withAlpha(100), fontStyle: FontStyle.italic)),
+          ],
           const SizedBox(height: 8),
           Text(word.category, style: TextStyle(fontSize: 13, color: cs.onSurface.withAlpha(120))),
           const SizedBox(height: 32),

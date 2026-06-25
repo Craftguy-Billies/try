@@ -34,6 +34,7 @@ void main() {
 
   appState.init();
   frenchState; // initialize
+  frenchState.load(); // restore persisted progress
 
   debugPrint = (message, {wrapWidth}) {
     if (appState.initialized) {

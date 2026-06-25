@@ -7,6 +7,7 @@ class VocabItem {
   final String category;
   final String? example;
   final String? gender; // 'm' or 'f' for nouns
+  final String? ipa; // IPA pronunciation guide
   int level; // SRS level 0-5
   DateTime? nextReview;
   int correctCount;
@@ -20,6 +21,7 @@ class VocabItem {
     required this.category,
     this.example,
     this.gender,
+    this.ipa,
     this.level = 0,
     this.nextReview,
     this.correctCount = 0,
@@ -64,7 +66,7 @@ class VocabItem {
 
   Map<String, dynamic> toJson() => {
     'id': id, 'french': french, 'english': english, 'category': category,
-    'example': example, 'gender': gender, 'level': level,
+    'example': example, 'gender': gender, 'ipa': ipa, 'level': level,
     'correctCount': correctCount, 'incorrectCount': incorrectCount,
     'streak': streak, 'nextReview': nextReview?.toIso8601String(),
   };
@@ -72,7 +74,7 @@ class VocabItem {
   factory VocabItem.fromJson(Map<String, dynamic> json) => VocabItem(
     id: json['id'], french: json['french'], english: json['english'],
     category: json['category'], example: json['example'],
-    gender: json['gender'], level: json['level'] ?? 0,
+    gender: json['gender'], ipa: json['ipa'], level: json['level'] ?? 0,
     correctCount: json['correctCount'] ?? 0,
     incorrectCount: json['incorrectCount'] ?? 0,
     streak: json['streak'] ?? 0,

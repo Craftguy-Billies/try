@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../state/french_state.dart';
 import '../state/app_state.dart';
