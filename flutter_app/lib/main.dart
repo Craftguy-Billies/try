@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'state/app_state.dart';
+import 'state/french_state.dart';
 import 'widgets/error_boundary.dart';
-import 'pages/counter_page.dart';
-import 'pages/tasks_page.dart';
-import 'pages/controls_page.dart';
-import 'pages/form_page.dart';
-import 'pages/logs_page.dart';
-import 'pages/drawing_page.dart';
-import 'pages/reaction_page.dart';
+import 'pages/learn_page.dart';
+import 'pages/practice_page.dart';
+import 'pages/conjugation_page.dart';
+import 'pages/grammar_page.dart';
+import 'pages/progress_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +33,7 @@ void main() {
   };
 
   appState.init();
+  frenchState; // initialize
 
   debugPrint = (message, {wrapWidth}) {
     if (appState.initialized) {
@@ -42,27 +42,45 @@ void main() {
     debugPrintSynchronously(message, wrapWidth: wrapWidth);
   };
 
-  runApp(const TrialHostApp());
+  runApp(const FrenchApp());
 }
 
-class TrialHostApp extends StatelessWidget {
-  const TrialHostApp({super.key});
+class FrenchApp extends StatelessWidget {
+  const FrenchApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TrialHost Flutter',
+      title: 'Learn French',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.system,
       darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6750A4), brightness: Brightness.dark),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A237E), // French blue
+          brightness: Brightness.dark,
+        ),
         useMaterial3: true,
-        cardTheme: CardThemeData(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.white.withAlpha(20)))),
+        cardTheme: CardThemeData(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.white.withAlpha(20)),
+          ),
+        ),
       ),
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6750A4), brightness: Brightness.light),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A237E),
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
-        cardTheme: CardThemeData(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.black.withAlpha(15)))),
+        cardTheme: CardThemeData(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.black.withAlpha(15)),
+          ),
+        ),
       ),
       home: const ErrorBoundary(pageName: 'App', child: MainShell()),
     );
@@ -78,7 +96,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   int _tab = 0;
   String? _lastNavigationLog;
-  static const _tabNames = ['Counter', 'Tasks', 'Controls', 'Form', 'Sketch', 'Reaction', 'Logs'];
+  static const _tabNames = ['Learn', 'Practice', 'Verbs', 'Grammar', 'Progress'];
 
   late final List<Widget> _tabs;
 
@@ -87,17 +105,15 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _tabs = const [
-      ErrorBoundary(pageName: 'Counter', child: CounterPage()),
-      ErrorBoundary(pageName: 'Tasks', child: TasksPage()),
-      ErrorBoundary(pageName: 'Controls', child: ControlsPage()),
-      ErrorBoundary(pageName: 'Form', child: FormPage()),
-      ErrorBoundary(pageName: 'Sketch', child: DrawingPage()),
-      ErrorBoundary(pageName: 'Reaction', child: ReactionPage()),
-      ErrorBoundary(pageName: 'Logs', child: LogsPage()),
+      ErrorBoundary(pageName: 'Learn', child: LearnPage()),
+      ErrorBoundary(pageName: 'Practice', child: PracticePage()),
+      ErrorBoundary(pageName: 'Verbs', child: ConjugationPage()),
+      ErrorBoundary(pageName: 'Grammar', child: GrammarPage()),
+      ErrorBoundary(pageName: 'Progress', child: ProgressPage()),
     ];
 
-    appState.log('NAV', 'App started — default tab: ${_tabNames[_tab]}', color: Colors.purple);
-    appState.log('INFO', 'Flutter web | ${defaultTargetPlatform.name} | Display: ${WidgetsBinding.instance.platformDispatcher.displays.first.size.width.toInt()}x${WidgetsBinding.instance.platformDispatcher.displays.first.size.height.toInt()}', color: Colors.blueGrey);
+    appState.log('NAV', '🇫🇷 French app started — default tab: ${_tabNames[_tab]}', color: const Color(0xFF1A237E));
+    appState.log('INFO', 'Flutter | ${defaultTargetPlatform.name} | Display: ${WidgetsBinding.instance.platformDispatcher.displays.first.size.width.toInt()}x${WidgetsBinding.instance.platformDispatcher.displays.first.size.height.toInt()}', color: Colors.blueGrey);
   }
 
   @override
@@ -130,10 +146,10 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (_tab > 0) {
-          appState.log('NAV', 'Back navigation: ${_tabNames[_tab]} → ${_tabNames[0]}', color: Colors.purple);
+          appState.log('NAV', 'Back navigation: ${_tabNames[_tab]} → ${_tabNames[0]}', color: const Color(0xFF1A237E));
           setState(() => _tab = 0);
         } else {
-          appState.log('NAV', 'Back press on home — showing exit hint', color: Colors.purple);
+          appState.log('NAV', 'Back press on home — showing exit hint', color: const Color(0xFF1A237E));
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Press back again to exit'), duration: Duration(seconds: 2), behavior: SnackBarBehavior.floating),
           );
@@ -150,13 +166,11 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
           selectedIndex: _tab,
           onDestinationSelected: (i) => _switchTab(i),
           destinations: const [
-            NavigationDestination(icon: Icon(Icons.plus_one), label: 'Counter'),
-            NavigationDestination(icon: Icon(Icons.checklist), label: 'Tasks'),
-            NavigationDestination(icon: Icon(Icons.tune), label: 'Controls'),
-            NavigationDestination(icon: Icon(Icons.assignment), label: 'Form'),
-            NavigationDestination(icon: Icon(Icons.brush), label: 'Sketch'),
-            NavigationDestination(icon: Icon(Icons.flash_on), label: 'Reaction'),
-            NavigationDestination(icon: Icon(Icons.terminal), label: 'Logs'),
+            NavigationDestination(icon: Icon(Icons.school), label: 'Learn'),
+            NavigationDestination(icon: Icon(Icons.quiz), label: 'Practice'),
+            NavigationDestination(icon: Icon(Icons.edit_note), label: 'Verbs'),
+            NavigationDestination(icon: Icon(Icons.menu_book), label: 'Grammar'),
+            NavigationDestination(icon: Icon(Icons.trending_up), label: 'Progress'),
           ],
         ),
       ),
@@ -167,7 +181,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     if (i == _tab) return;
     final newTab = _tabNames[i];
     if (newTab != _lastNavigationLog) {
-      appState.log('NAV', 'Tab: ${_tabNames[_tab]} → $newTab', color: Colors.purple);
+      appState.log('NAV', 'Tab: ${_tabNames[_tab]} → $newTab', color: const Color(0xFF1A237E));
       _lastNavigationLog = newTab;
     }
     setState(() => _tab = i);

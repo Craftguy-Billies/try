@@ -1,56 +1,59 @@
 # Craftguy-Billies/try — Project Memory
 
 ## Architecture
-- **Flutter app** (`flutter_app/`): Multi-tab web + Android app, Material 3, CanvasKit renderer
-- **trialhost.html**: Standalone Vanilla JS debug panel (DOM-based, ~1070 lines, 32+ event categories)
-- **Global state**: Singleton `AppState extends ChangeNotifier` at `lib/state/app_state.dart`
-- **State pattern**: `ListenableBuilder(listenable: appState, ...)` for reactive UI; `appState.addListener` for pages needing side effects (scroll, keyboard observer)
+- **Flutter app** (`flutter_app/`): French learning app — 5 tabs, Material 3, web + Android
+- **Global state**:
+  - `AppState extends ChangeNotifier` at `lib/state/app_state.dart` — logging/infra
+  - `FrenchState extends ChangeNotifier` at `lib/state/french_state.dart` — SRS vocab, XP, streaks, quiz
+- **State pattern**: `ListenableBuilder(listenable: frenchState)` for reactive UI; singleton instances
 
-## File Map (13 hand-written Dart files, 3,077 lines total)
+## File Map (18 hand-written Dart files)
 ```
 flutter_app/lib/
-├── main.dart              (176 lines) — entry, TrialHostApp, MainShell, 7 tabs, PopScope
+├── main.dart                  (190 lines) — entry, FrenchApp, MainShell, 5 tabs, PopScope
 ├── state/
-│   └── app_state.dart     (217 lines) — ChangeNotifier: counter, tasks, controls, form, lifecycle, logging
+│   ├── app_state.dart         (217 lines) — ChangeNotifier: logging, lifecycle
+│   └── french_state.dart      (~260 lines) — ChangeNotifier: vocab SRS, XP, streaks, quiz gen
 ├── models/
-│   ├── log_entry.dart     (9 lines)  — immutable log entry
-│   └── todo_item.dart     (22 lines) — immutable TodoItem with copyWith
+│   ├── log_entry.dart         (9 lines)  — immutable log entry
+│   ├── todo_item.dart         (22 lines) — immutable TodoItem (legacy)
+│   ├── vocab_item.dart        (~80 lines) — VocabItem with SRS levels, mastery, colors
+│   └── verb.dart              (~50 lines) — VerbConjugation, GrammarLesson
+├── data/
+│   ├── french_vocab.dart      (~170 lines) — 120+ words across 8 categories
+│   ├── french_verbs.dart      (~100 lines) — 10 verbs x 4 tenses
+│   └── french_grammar.dart    (~200 lines) — 10 grammar lessons
 ├── pages/
-│   ├── counter_page.dart  (163 lines) — confetti + haptic + milestone badges + gesture pad
-│   ├── tasks_page.dart    (245 lines) — CRUD todo with undo
-│   ├── controls_page.dart (147 lines) — sliders, switches, rating, dropdown, chips
-│   ├── form_page.dart     (277 lines) — validated registration form
-│   ├── logs_page.dart     (179 lines) — log viewer with filter + auto-scroll
-│   ├── drawing_page.dart  (190 lines) — finger-paint canvas: 12 colors, undo/redo/clear
-│   └── reaction_page.dart (208 lines) — reflex game: idle→waiting→ready→tap state machine
+│   ├── learn_page.dart        (~280 lines) — flashcards with flip anim, category bar
+│   ├── practice_page.dart     (~280 lines) — multiple choice quiz, progress bar
+│   ├── conjugation_page.dart  (~200 lines) — verb conjugation tables, tense tabs
+│   ├── grammar_page.dart      (~200 lines) — grammar lesson browser with filter
+│   └── progress_page.dart     (~330 lines) — XP, streaks, study calendar, category breakdown
 └── widgets/
-    ├── error_boundary.dart (75 lines) — catches errors, logs to appState, restores builder
-    └── confetti.dart       (110 lines) — particle burst animation (CustomPainter + AnimationController)
+    ├── error_boundary.dart    (75 lines) — error catch + restore builder
+    └── confetti.dart          (110 lines) — particle burst animation
 ```
 
 ## Critical Fix History (do NOT regress)
-1. **Confetti overlay blocks taps** (2026-06-24): `ConfettiWidget`'s `CustomPaint(size: Size.infinite)` in Stack was on top of child, intercepting all pointer events. Fix: wrap in `IgnorePointer`.
-2. **LogsPage never rebuilt** (2026-06-24): `_onStateChanged` didn't call `setState()`. Fix: add `setState(() {})` after auto-scroll logic.
-3. **ErrorBoundary global corruption** (2026-06-24): `ErrorWidget.builder` overridden globally, never restored. Fix: save original in initState, restore in dispose.
-4. **FormPage null assert** (2026-06-24): `_formKey.currentState!` could crash. Fix: null-safe guard + mounted check.
-5. **Counter reactivity** (2026-06-24): Pages were StatelessWidget reading appState once. Fix: `ListenableBuilder` or `addListener` pattern on all pages.
+1. **Confetti overlay blocks taps**: wrap CustomPaint in IgnorePointer
+2. **ErrorBoundary global corruption**: save/restore ErrorWidget.builder in initState/dispose
+3. **Void expression in collection**: call void methods from addPostFrameCallback, never inline in children lists
+4. **Null safety**: Never use `!` without prior null check
 
 ## Build Commands
 ```bash
-# Web (served at port 12001)
+# Web
 cd flutter_app && flutter build web
 # APK (Android SDK 35, NDK 26.3, Java 21)
 cd flutter_app && flutter build apk --release
-# Serve
+# Serve on port 12001
 cd flutter_app/build/web && python3 -m http.server 12001 --bind 0.0.0.0
 ```
 
 ## Key Patterns
-- **Reactivity**: Always use `ListenableBuilder(listenable: appState)` to wrap UI that reads appState
+- **Reactivity**: Use `ListenableBuilder(listenable: frenchState)` for French state; `appState` for logs
 - **Haptics**: Import `flutter/services.dart`, use `HapticFeedback.lightImpact()` / `heavyImpact()`
 - **Logging**: Always call `appState.log(category, detail, color:)` before/after state changes
-- **Dispose**: Cancel timers, remove listeners, restore global state in `dispose()`
-- **Null safety**: Never use `!` on nullable values without prior null check
-- **CustomPaint overlays**: Always wrap in `IgnorePointer` to let touches pass through
-- **Duplicates**: Check for duplicate imports and const constructors before committing
-- **Tab state**: `AnimatedSwitcher` without keys recreates page state on tab switch; appState must be the single source of truth
+- **SRS**: VocabItem has level 0-5 with intervals [0, 4, 24, 72, 168, 720] hours
+- **Data singularity**: frenchState._vocab is the single source of truth; use getDueWords() for quiz items
+- **Tab state**: `AnimatedSwitcher` without keys recreates page state on tab switch; global state preserves progress
