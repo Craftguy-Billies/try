@@ -730,14 +730,12 @@ noscript div {
     log('DELETE_BOX', 'marked as deleting');
 
     // Remove after animation completes
-    var removed = false;
     try {
       setTimeout(function() {
         try {
           // Double-check box still has a parent before removing
           if (li.parentNode === oUl1) {
             oUl1.removeChild(li);
-            removed = true;
             activeComments = Math.max(0, activeComments - 1);
             log('DELETE_BOX', 'SUCCESS — box removed from DOM', {
               activeComments: activeComments,
