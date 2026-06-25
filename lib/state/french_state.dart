@@ -19,12 +19,15 @@ class FrenchState extends ChangeNotifier {
   List<VocabItem> _vocab = [];
   List<VocabItem> get vocab => List.unmodifiable(_vocab);
 
+  bool _savePending = false;
+
   // Current quiz state
   List<VocabItem> _quizItems = [];
   int _quizIndex = 0;
   int _quizCorrect = 0;
   int _quizTotal = 0;
   bool _quizComplete = false;
+  bool _quizActive = false; // guard against double quiz start
   String _quizMode = 'practice'; // 'practice' or 'exam'
 
   List<VocabItem> get quizItems => List.unmodifiable(_quizItems);
@@ -32,6 +35,7 @@ class FrenchState extends ChangeNotifier {
   int get quizCorrect => _quizCorrect;
   int get quizTotal => _quizTotal;
   bool get quizComplete => _quizComplete;
+  bool get quizActive => _quizActive;
   String get quizMode => _quizMode;
 
   // Exam mode
@@ -88,12 +92,17 @@ class FrenchState extends ChangeNotifier {
   }
 
   Future<void> _saveVocab() async {
+    if (_savePending) return;
+    _savePending = true;
     try {
+      await Future.delayed(const Duration(milliseconds: 100));
       final prefs = await SharedPreferences.getInstance();
       final encoded = _vocab.map((v) => jsonEncode(v.toJson())).toList();
       await prefs.setStringList('vocabItems', encoded);
     } catch (e) {
       _app.log('ERROR', 'Failed to save vocab', {'error': e.toString()});
+    } finally {
+      _savePending = false;
     }
   }
 
@@ -153,6 +162,11 @@ class FrenchState extends ChangeNotifier {
 
   // Quiz generation
   void startQuiz({int count = 10, String? category, String mode = 'practice'}) {
+    if (_quizActive) {
+      _app.log('QUIZ', 'Quiz rejected - already active');
+      return;
+    }
+    _quizActive = true;
     _quizMode = mode;
     _quizIndex = 0;
     _quizCorrect = 0;
@@ -170,6 +184,11 @@ class FrenchState extends ChangeNotifier {
   }
 
   void startExam({String level = 'A1', int timeSeconds = 300, int count = 30}) {
+    if (_quizActive) {
+      _app.log('QUIZ', 'Exam rejected - quiz already active');
+      return;
+    }
+    _quizActive = true;
     _quizMode = 'exam';
     _examLevel = level;
     _examTimeRemaining = timeSeconds;
@@ -187,6 +206,8 @@ class FrenchState extends ChangeNotifier {
     _quizItems = _quizItems.take(count).toList();
 
     if (_quizItems.isEmpty) {
+      _quizComplete = true;
+      _quizActive = false;
       _app.log('ERROR', 'Exam has no quiz items', {'level': level});
       notifyListeners();
       return;
@@ -225,6 +246,7 @@ class FrenchState extends ChangeNotifier {
     _quizIndex++;
     if (_quizIndex >= _quizItems.length) {
       _quizComplete = true;
+      _quizActive = false;
       final xpBonus = _quizMode == 'exam' ? 50 : 20;
       _app.addXP(xpBonus * _quizCorrect);
       _app.updateStreak();
@@ -240,6 +262,7 @@ class FrenchState extends ChangeNotifier {
       _examTimeRemaining--;
       if (_examTimeRemaining == 0) {
         _quizComplete = true;
+        _quizActive = false;
         _app.log('EXAM', 'Time up', {'correct': _quizCorrect, 'total': _quizTotal});
       }
       notifyListeners();
@@ -252,7 +275,9 @@ class FrenchState extends ChangeNotifier {
     _quizCorrect = 0;
     _quizTotal = 0;
     _quizComplete = false;
+    _quizActive = false;
     _quizMode = 'practice';
+    _app.log('QUIZ', 'Quiz reset');
     notifyListeners();
   }
 

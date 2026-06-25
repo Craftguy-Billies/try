@@ -84,6 +84,13 @@ class _ExamPageState extends State<ExamPage>
       timeSeconds: _totalTime,
       count: _selectedCount,
     );
+    if (_french.quizTotal == 0) {
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.noData)),
+      );
+      return;
+    }
     setState(() => _phase = _ExamPhase.running);
     _startTimer();
   }
