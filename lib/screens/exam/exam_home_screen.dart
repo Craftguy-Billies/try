@@ -14,6 +14,9 @@ class ExamHomeScreen extends StatelessWidget {
     final _logger = AuditLogger();
     final t = Translations(Localizations.localeOf(context).languageCode);
     _logger.logScreenView('ExamHome');
+    if (ExamService.configs.isEmpty) {
+      _logger.logEdge('ExamHome', 'empty-exam-configs');
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text(t.get('exam'))),
@@ -29,7 +32,14 @@ class ExamHomeScreen extends StatelessWidget {
             Text(t.get('exam'), style: TextStyle(fontSize: 14, color: Colors.white.withAlpha(200))),
           ])),
         const SizedBox(height: 20),
-        ...ExamService.configs.map((config) => Card(margin: const EdgeInsets.only(bottom: 12),
+        if (ExamService.configs.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Center(child: Text(t.get('no_data'),
+              style: TextStyle(fontSize: 16, color: AppColors.textSecondary))),
+          )
+        else
+          ...ExamService.configs.map((config) => Card(margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             contentPadding: const EdgeInsets.all(16),
             leading: Container(width: 50, height: 50, alignment: Alignment.center,

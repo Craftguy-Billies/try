@@ -42,6 +42,14 @@ class _VocabularyListScreenState extends State<VocabularyListScreen> {
     final t = Translations(Localizations.localeOf(context).languageCode);
     final vocab = context.watch<VocabularyService>();
     var words = widget.categoryId != null ? vocab.byCategory(widget.categoryId!) : vocab.allWords;
+
+    // Log empty category results before search/filter
+    if (words.isEmpty) {
+      _logger.logEdge('VocabularyList', 'category-empty', data: {
+        'categoryId': widget.categoryId, 'categoryName': widget.categoryName,
+      });
+    }
+
     if (_searchQuery.isNotEmpty) words = words.where((w) =>
       w.french.toLowerCase().contains(_searchQuery.toLowerCase()) ||
       w.english.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
@@ -70,7 +78,11 @@ class _VocabularyListScreenState extends State<VocabularyListScreen> {
                 selected: _difficultyFilter == d,
                 onSelected: (v) {
                   final newVal = v ? d : 0;
-                  _logger.logFilter('VocabularyList', 'difficulty=${VocabularyWord.difficultyLabel(d)}', results: null);
+                  if (newVal == 0 && _difficultyFilter > 0) {
+                    _logger.logFilter('VocabularyList', 'difficulty-filter-cleared', results: null);
+                  } else if (v) {
+                    _logger.logFilter('VocabularyList', 'difficulty=${VocabularyWord.difficultyLabel(d)}', results: null);
+                  }
                   setState(() => _difficultyFilter = newVal);
                 },
                 selectedColor: AppColors.primary.withAlpha(40),

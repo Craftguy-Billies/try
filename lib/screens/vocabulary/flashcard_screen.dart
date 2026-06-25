@@ -19,6 +19,7 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
   final _logger = AuditLogger();
   int _index = 0;
   bool _showBack = false;
+  bool _isFlipping = false;
   late AnimationController _flipCtrl;
   late Animation<double> _flipAnim;
 
@@ -27,11 +28,20 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
     super.initState();
     _logger.logInit('Flashcard', data: {'wordCount': widget.words.length});
     _logger.logScreenView('Flashcard', p: {'words': widget.words.length});
+    if (widget.words.isEmpty) {
+      _logger.logEdge('Flashcard', 'empty-words-list — cannot display flashcards');
+    }
     _flipCtrl = AnimationController(duration: const Duration(milliseconds: 400), vsync: this);
     _flipAnim = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _flipCtrl, curve: Curves.easeInOut));
     _flipCtrl.addStatusListener((status) {
-      if (status == AnimationStatus.completed) _logger.logAnimationDone('Flashcard', 'flip-forward');
-      if (status == AnimationStatus.dismissed) _logger.logAnimationDone('Flashcard', 'flip-reverse');
+      if (status == AnimationStatus.completed) {
+        _logger.logAnimationDone('Flashcard', 'flip-forward');
+        _isFlipping = false;
+      }
+      if (status == AnimationStatus.dismissed) {
+        _logger.logAnimationDone('Flashcard', 'flip-reverse');
+        _isFlipping = false;
+      }
     });
   }
 
@@ -43,7 +53,12 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
   }
 
   void _flip() {
+    if (_isFlipping) {
+      _logger.logGuard('Flashcard', 'flip-in-progress');
+      return;
+    }
     final oldShowBack = _showBack;
+    _isFlipping = true;
     if (_showBack) {
       _logger.logAnimationStart('Flashcard', 'flip-reverse');
       _flipCtrl.reverse();
@@ -56,6 +71,10 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
   }
 
   void _next() {
+    if (_isFlipping) {
+      _logger.logGuard('Flashcard', 'next-while-flipping');
+      return;
+    }
     if (_index < widget.words.length - 1) {
       final oldIdx = _index;
       final completedWord = widget.words[_index];
@@ -76,6 +95,10 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
   }
 
   void _prev() {
+    if (_isFlipping) {
+      _logger.logGuard('Flashcard', 'prev-while-flipping');
+      return;
+    }
     if (_index > 0) {
       final oldIdx = _index;
       setState(() { _index--; _showBack = false; _flipCtrl.reset(); });
@@ -89,6 +112,17 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     final t = Translations(Localizations.localeOf(context).languageCode);
+
+    // Guard against empty words list
+    if (widget.words.isEmpty) {
+      _logger.logEdge('Flashcard', 'build-with-empty-words');
+      return Scaffold(
+        appBar: AppBar(title: Text(t.get('flashcards'))),
+        body: Center(child: Text(t.get('no_data'),
+          style: TextStyle(fontSize: 16, color: AppColors.textSecondary))),
+      );
+    }
+
     final word = widget.words[_index];
     return Scaffold(
       appBar: AppBar(title: Text(t.get('flashcards')),

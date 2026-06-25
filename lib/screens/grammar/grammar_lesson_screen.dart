@@ -27,6 +27,14 @@ class _GrammarLessonScreenState extends State<GrammarLessonScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _logger.logLifecycle('GrammarLesson', 'didChangeDependencies', data: {
+      'locale': Localizations.localeOf(context).languageCode,
+    });
+  }
+
+  @override
   void dispose() {
     _logger.logDispose('GrammarLesson', data: {
       'lessonId': widget.lesson.id, 'exerciseCompleted': _exerciseIdx,

@@ -131,7 +131,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               await context.read<UserProgressProvider>().resetAll();
               if (context.mounted) {
                 setState(() { _darkMode = false; _notificationsEnabled = true; });
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('All data cleared')));
+                try {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('All data cleared')));
+                  _logger.debug('Settings', 'ClearAllData snackbar shown');
+                } catch (e, stack) {
+                  _logger.logAsyncFail('Settings', 'showSnackBar', e, stack);
+                }
               }
             }
           })),

@@ -56,6 +56,7 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
     super.initState();
     _logger.logInit('FrenchLearnApp');
     WidgetsBinding.instance.addObserver(this);
+    _logger.debug('App', 'WidgetsBindingObserver added');
     _initApp();
   }
 
@@ -63,6 +64,7 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
   void dispose() {
     _logger.logDispose('FrenchLearnApp');
     WidgetsBinding.instance.removeObserver(this);
+    _logger.debug('App', 'WidgetsBindingObserver removed');
     super.dispose();
   }
 

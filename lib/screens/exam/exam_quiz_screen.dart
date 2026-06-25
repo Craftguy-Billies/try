@@ -39,8 +39,19 @@ class _ExamQuizScreenState extends State<ExamQuizScreen> {
     _questions = ExamService().generateExam(widget.config);
     _secondsLeft = widget.config.timeMinutes * 60;
 
+    if (_secondsLeft <= 0) {
+      _logger.logEdge('ExamQuiz', 'zero-or-negative-time', data: {'seconds': _secondsLeft, 'timeMin': widget.config.timeMinutes});
+      _logger.logRecover('ExamQuiz', 'zero time — auto-submitting');
+      _submit(reason: 'zero_time');
+      return;
+    }
+
     _logger.logTimerStart('ExamQuiz', seconds: _secondsLeft);
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) {
+        _logger.logEdge('ExamQuiz', 'timer-tick-after-dispose', data: {'tickCount': _tickCount});
+        return;
+      }
       _tickCount++;
       setState(() {
         _secondsLeft--;
@@ -87,9 +98,17 @@ class _ExamQuizScreenState extends State<ExamQuizScreen> {
       'timeUsed_s': (widget.config.timeMinutes * 60) - _secondsLeft,
     });
 
+    if (!mounted) {
+      _logger.logEdge('ExamQuiz', 'submit-after-dispose — cannot navigate to result');
+      return;
+    }
     final progress = context.read<UserProgressProvider>();
     progress.addPracticeTime(widget.config.timeMinutes);
 
+    if (!mounted) {
+      _logger.logEdge('ExamQuiz', 'submit-context-invalidated — cannot navigate to result');
+      return;
+    }
     Navigator.pushReplacement(context, MaterialPageRoute(
       builder: (_) => ExamResultScreen(score: score, total: _questions.length,
         correct: correct, config: widget.config, questions: _questions, answers: _answers)));
@@ -129,9 +148,14 @@ class _ExamQuizScreenState extends State<ExamQuizScreen> {
       return;
     }
     final prev = _answers[_current];
+    final isChange = prev != null && prev != opt;
     _logger.logTap('ExamQuiz', 'answer:${_current}', data: {
-      'prev': prev, 'selected': opt, 'isChange': prev != null && prev != opt,
+      'prev': prev, 'selected': opt, 'isChange': isChange,
     });
+    if (prev == opt) {
+      _logger.logGuardSkip('ExamQuiz', 'same-answer', data: {'question': _current, 'opt': opt});
+      return;
+    }
     setState(() => _answers[_current] = opt);
   }
 

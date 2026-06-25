@@ -61,19 +61,29 @@ class PhrasesScreen extends StatelessWidget {
 
   Widget _section(BuildContext context, String title, List<Phrase> phrases) {
     final _logger = AuditLogger();
+    if (phrases.isEmpty) {
+      _logger.logEdge('Phrases', 'empty-section', data: {'section': title});
+    }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
       const SizedBox(height: 8),
-      ...phrases.map((p) => Card(margin: const EdgeInsets.only(bottom: 6),
-        child: ListTile(
-          title: Text(p.french, style: const TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: Text(p.english + (p.formality != null ? '  2022  ${p.formality}' : '')),
-          trailing: IconButton(icon: const Icon(Icons.volume_up, size: 20),
-            onPressed: () {
-              _logger.logButton('Phrases', 'Audio:$title', data: {'text': p.french});
-              context.read<AudioService>().speak(p.french);
-            }),
-        ))),
+      if (phrases.isEmpty)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text('No phrases available',
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        )
+      else
+        ...phrases.map((p) => Card(margin: const EdgeInsets.only(bottom: 6),
+          child: ListTile(
+            title: Text(p.french, style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(p.english + (p.formality != null ? '  2022  ${p.formality}' : '')),
+            trailing: IconButton(icon: const Icon(Icons.volume_up, size: 20),
+              onPressed: () {
+                _logger.logButton('Phrases', 'Audio:$title', data: {'text': p.french});
+                context.read<AudioService>().speak(p.french);
+              }),
+          ))),
       const SizedBox(height: 16),
     ]);
   }

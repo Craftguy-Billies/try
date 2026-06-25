@@ -31,7 +31,13 @@ class LanguageSwitchScreen extends StatelessWidget {
                 _logger.logTap('LanguageSwitch', '${lang.code}');
                 _logger.logNavigate('LanguageSwitch', 'app.changeLanguage(${lang.code})', method: 'callback');
                 StorageService().setLanguage(lang.code);
-                FrenchLearnApp.of(context)!.changeLanguage(lang.code);
+                final appState = FrenchLearnApp.of(context);
+                if (appState == null) {
+                  _logger.logEdge('LanguageSwitch', 'FrenchLearnApp.of(context) is null — cannot change language');
+                  _logger.logRecover('LanguageSwitch', 'language change aborted — no ancestor state');
+                  return;
+                }
+                appState.changeLanguage(lang.code);
                 Navigator.pop(context, true);
               },
             ));

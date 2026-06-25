@@ -15,6 +15,12 @@ class WordDetailScreen extends StatelessWidget {
     final _logger = AuditLogger();
     _logger.logScreenView('WordDetail(${word.id})', p: {'word': word.french});
 
+    // Log missing optional fields for auditing
+    if (word.pronunciation == null) _logger.debug('WordDetail', 'no-pronunciation', data: {'id': word.id});
+    if (word.exampleFrench == null) _logger.debug('WordDetail', 'no-example', data: {'id': word.id});
+    if (word.gender == null) _logger.debug('WordDetail', 'no-gender', data: {'id': word.id});
+    if (word.synonyms == null || word.synonyms!.isEmpty) _logger.debug('WordDetail', 'no-synonyms', data: {'id': word.id});
+
     return Scaffold(
       appBar: AppBar(title: Text(word.french)),
       body: SingleChildScrollView(

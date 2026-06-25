@@ -18,6 +18,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
   bool _scrolledToEnd = false;
 
   @override
+  void initState() {
+    super.initState();
+    _logger.logInit('Conversation(${widget.conversation.id})', data: {
+      'lines': widget.conversation.lines.length,
+    });
+    if (widget.conversation.lines.isEmpty) {
+      _logger.logEdge('Conversation(${widget.conversation.id})', 'empty-conversation — no lines to display');
+    }
+  }
+
+  @override
   void dispose() {
     _logger.logDispose('Conversation(${widget.conversation.id})', data: {
       'lines': widget.conversation.lines.length, 'scrolledToEnd': _scrolledToEnd,
@@ -29,6 +40,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget build(BuildContext context) {
     final isFr = Localizations.localeOf(context).languageCode == 'fr';
     _logger.logScreenView('Conversation(${widget.conversation.id})', p: {'lines': widget.conversation.lines.length});
+
+    if (widget.conversation.lines.isEmpty) {
+      _logger.logEdge('Conversation(${widget.conversation.id})', 'build-with-empty-lines');
+      return Scaffold(
+        appBar: AppBar(title: Text(isFr ? widget.conversation.titleFr : widget.conversation.titleEn)),
+        body: const Center(child: Text('No conversation data')),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text(isFr ? widget.conversation.titleFr : widget.conversation.titleEn)),

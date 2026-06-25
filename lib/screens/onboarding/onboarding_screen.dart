@@ -16,6 +16,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
   final int _totalPages = 4;
+  bool _isAnimating = false;
 
   final List<_OnboardingPage> _pages = [
     _OnboardingPage(icon: Icons.school, color: AppColors.primary, titleKey: 'onboarding_title_1', descKey: 'onboarding_desc_1'),
@@ -40,48 +41,73 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _onPageChanged(int i) {
     final old = _currentPage;
+    _isAnimating = false;
     setState(() => _currentPage = i);
     _logger.logSwipe('Onboarding', from: old, to: i);
     _logger.logStateChangeInt('Onboarding', 'currentPage', old, i);
   }
 
-  void _handleSkip() {
-    _logger.logButton('Onboarding', 'Skip', data: {'from_page': _currentPage});
-    _logger.logEdge('Onboarding', 'User skipped onboarding');
-    StorageService().setOnboardingCompleted();
+  Future<void> _completeOnboarding(String reason) async {
+    _logger.logEdge('Onboarding', 'User $reason onboarding');
+    try {
+      await StorageService().setOnboardingCompleted();
+      _logger.debug('Onboarding', 'setOnboardingCompleted succeeded');
+    } catch (e, stack) {
+      _logger.logAsyncFail('Onboarding', 'setOnboardingCompleted', e, stack);
+      _logger.logRecover('Onboarding', 'onboarding flag save failed — navigating anyway');
+    }
+    if (!mounted) {
+      _logger.logEdge('Onboarding', 'not-mounted-after-onboarding-complete');
+      return;
+    }
     _logger.logNavigate('Onboarding', '/home', method: 'pushReplacement');
     Navigator.pushReplacementNamed(context, '/home');
   }
 
+  void _handleSkip() {
+    _logger.logButton('Onboarding', 'Skip', data: {'from_page': _currentPage});
+    _completeOnboarding('skipped');
+  }
+
   void _handleNextOrStart() {
+    if (_isAnimating) {
+      _logger.logGuard('Onboarding', 'double-tap-next', data: {'page': _currentPage});
+      return;
+    }
     if (_currentPage < _totalPages - 1) {
       _logger.logButton('Onboarding', 'Next', data: {'page': _currentPage, 'to': _currentPage + 1});
+      _isAnimating = true;
       _pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
     } else {
       _logger.logButton('Onboarding', 'Get Started', data: {'from_page': _currentPage});
-      _logger.logEdge('Onboarding', 'User completed onboarding');
-      StorageService().setOnboardingCompleted();
-      _logger.logNavigate('Onboarding', '/home', method: 'pushReplacement');
-      Navigator.pushReplacementNamed(context, '/home');
+      _completeOnboarding('completed');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final t = Translations(Localizations.localeOf(context).languageCode);
-    return Scaffold(
-      body: SafeArea(
-        child: Column(children: [
-          Expanded(flex: 3, child: PageView.builder(
-            controller: _pageController, itemCount: _totalPages,
-            onPageChanged: _onPageChanged,
-            itemBuilder: (ctx, i) => _buildPage(ctx, _pages[i]),
-          )),
-          _buildDots(),
-          const SizedBox(height: 24),
-          _buildButtons(t),
-          const SizedBox(height: 40),
-        ]),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _logger.logBackPress('Onboarding', handled: false, data: {'page': _currentPage});
+        }
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: Column(children: [
+            Expanded(flex: 3, child: PageView.builder(
+              controller: _pageController, itemCount: _totalPages,
+              onPageChanged: _onPageChanged,
+              itemBuilder: (ctx, i) => _buildPage(ctx, _pages[i]),
+            )),
+            _buildDots(),
+            const SizedBox(height: 24),
+            _buildButtons(t),
+            const SizedBox(height: 40),
+          ]),
+        ),
       ),
     );
   }

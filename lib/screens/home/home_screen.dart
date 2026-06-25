@@ -28,7 +28,14 @@ class HomeScreen extends StatelessWidget {
       'categories': vocab.categories.length,
     });
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _logger.logBackPress('Home', handled: false, data: {'note': 'root — system back ignored'});
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(title: Text(t.get('app_name'))),
       drawer: const AppDrawer(currentRoute: '/'),
       body: SingleChildScrollView(
@@ -80,6 +87,7 @@ class HomeScreen extends StatelessWidget {
           ]),
           const SizedBox(height: 20),
         ]),
+      ),
       ),
     );
   }

@@ -15,11 +15,18 @@ class GrammarListScreen extends StatelessWidget {
     final t = Translations(Localizations.localeOf(context).languageCode);
     _logger.logScreenView('GrammarList', p: {'lessons': GrammarData.lessons.length});
 
+    if (GrammarData.lessons.isEmpty) {
+      _logger.logEdge('GrammarList', 'empty-lessons-list');
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(t.get('grammar'))),
-      body: ListView.builder(padding: const EdgeInsets.all(16),
-        itemCount: GrammarData.lessons.length,
-        itemBuilder: (ctx, i) {
+      body: GrammarData.lessons.isEmpty
+        ? Center(child: Text(t.get('no_data'),
+            style: TextStyle(fontSize: 16, color: AppColors.textSecondary)))
+        : ListView.builder(padding: const EdgeInsets.all(16),
+            itemCount: GrammarData.lessons.length,
+            itemBuilder: (ctx, i) {
           final lesson = GrammarData.lessons[i];
           return Card(margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(contentPadding: const EdgeInsets.all(16),
@@ -36,7 +43,7 @@ class GrammarListScreen extends StatelessWidget {
                 _logger.logNavigate('GrammarList', 'GrammarLesson(${lesson.id})', method: 'push');
                 Navigator.push(context, MaterialPageRoute(builder: (_) => GrammarLessonScreen(lesson: lesson)));
               }));
-        }),
+            }),
     );
   }
 }
