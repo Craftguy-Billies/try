@@ -1,1 +1,1032 @@
-<!DOCTYPE html> <html> <head> <meta charset="UTF-8"> <title></title> <style type="text/css"> body{ /*background-image: url(../img/91R58PIC3n2_1024.jpg);*/ } #div1{ margin: auto; border: 1px beige solid; width: 512px; text-align: right; } ul{ list-style-type: none; list-style-image: url(../img/touxiang.png); } .box{ width: 400px; height: 150px; /*background-color: yellow;*/ border: 1px darkgray solid; border-radius: 30px; position: relative; } .box .touxiang{ width: 80px; height: 80px; background-image: url(../img/touxiang.png); background-size: 100% 100%; position: absolute; left: 10px; top: 10px; } .box .nicheng{ width: 80px; height:25px ; /*background-color: red;*/ position: absolute; left: 10px; top: 100px; font-size: 12px; text-align: center; line-height: 25px; } .box .pinglun{ width: 290px; height: 80px; /*background-color: cyan;*/ position: absolute; top: 10px; right: 10px; } .box .shijian{ width: 200px; height: 25px; /*background-color: green;*/ position: absolute; top: 100px; left:100px; } </style> <script> window.onload=function(){ var oTxt = document.getElementById("txt"); var oBtn = document.getElementById("btn1"); var oUl1 = document.getElementById("ul1"); oBtn.onclick=function(){ var oBox = document.createElement("div"); oBox.className = "box"; //创建头像 var oDiv = document.createElement("div"); oDiv.className = "touxiang"; oBox.appendChild(oDiv); var oDiv = document.createElement("div"); oDiv.className = "nicheng"; oDiv.innerHTML = "指尖微凉*"; oBox.appendChild(oDiv); var oDiv = document.createElement("div"); oDiv.className = "pinglun"; oDiv.innerHTML = oTxt.value; oBox.appendChild(oDiv); var oDiv = document.createElement("div"); oDiv.className = "shijian"; var oDate = new Date(); //oDate.getFullYear oDiv.innerHTML ="评论时间&nbsp;&nbsp;"+ oDate.getFullYear()+"年"+(oDate.getMonth()+1)+"月"+oDate.getDate()+"日"+"<a href='javascript:;'>删除</a>"; oBox.appendChild(oDiv); oUl1.appendChild(oBox); /*oBox.insertBefore(oUl1,oDiv[0]);*/ var aA = oDiv.getElementsByTagName("a"); for(var i = 0;i<aA.length;i++) { aA[i].onclick=function(){ oDiv.removeChild(this.parentNode); } } } } </script> </script> </head> <body> <h2 align="center">网易云热评</h2> <div id="div1" > <textarea cols="70" rows="8" id="txt"></textarea><br /> <input type="button" value="评论" id="btn1" /> <ul id="ul1"> </ul> </div> </body>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>网易云热评 - 留言板</title>
+<style>
+/* ===== RESET & BASE ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Microsoft YaHei", "Helvetica Neue", sans-serif;
+  background: #f5f5f5;
+  color: #333;
+  min-height: 100vh;
+  padding: 20px 10px;
+}
+h2 {
+  text-align: center;
+  margin-bottom: 18px;
+  color: #c62f2f;
+  font-size: 22px;
+}
+
+/* ===== MAIN CONTAINER ===== */
+#div1 {
+  margin: 0 auto;
+  max-width: 512px;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e0d4c0;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: right;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* ===== INPUT AREA ===== */
+#input-area {
+  margin-bottom: 14px;
+}
+#nick-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: 8px;
+  text-align: left;
+}
+#txt {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  font-size: 14px;
+  resize: vertical;
+  text-align: left;
+  font-family: inherit;
+}
+#txt:focus, #nick-input:focus {
+  outline: none;
+  border-color: #c62f2f;
+  box-shadow: 0 0 0 2px rgba(198,47,47,0.12);
+}
+#char-count {
+  text-align: left;
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+#char-count.warn { color: #e67e22; }
+#char-count.over { color: #c62f2f; font-weight: bold; }
+#btn-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 6px;
+}
+#status-msg {
+  font-size: 12px;
+  color: #c62f2f;
+  flex: 1;
+  text-align: left;
+  min-height: 18px;
+}
+#btn1 {
+  padding: 7px 22px;
+  background: #c62f2f;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+#btn1:hover { background: #a82323; }
+#btn1:active { background: #8b1a1a; }
+#btn1:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  text-align: center;
+  color: #bbb;
+  padding: 40px 0;
+  font-size: 14px;
+  list-style: none;
+}
+
+/* ===== COMMENT LIST ===== */
+#ul1 {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+#ul1 li {
+  margin-bottom: 10px;
+}
+
+/* ===== COMMENT CARD ===== */
+.box {
+  width: 100%;
+  min-height: 120px;
+  border: 1px solid #d0d0d0;
+  border-radius: 12px;
+  position: relative;
+  padding: 10px 10px 10px 100px;
+  background: #fafafa;
+  text-align: left;
+  transition: box-shadow 0.2s;
+}
+.box:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+.box .touxiang {
+  width: 70px;
+  height: 70px;
+  background: #e8d5c4;
+  border-radius: 50%;
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+.box .nicheng {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+.box .pinglun {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.6;
+  word-break: break-word;
+  white-space: pre-wrap;
+  margin-bottom: 8px;
+  min-height: 20px;
+}
+.box .shijian {
+  font-size: 11px;
+  color: #999;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.box .shijian .delete-link {
+  color: #c62f2f;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+.box .shijian .delete-link:hover {
+  background: #fde8e8;
+}
+.box .shijian .delete-link:focus {
+  outline: 2px solid #c62f2f;
+  outline-offset: 1px;
+}
+
+/* ===== DELETE ANIMATION ===== */
+.box.deleting {
+  opacity: 0;
+  transform: translateX(30px);
+  transition: all 0.25s ease;
+  pointer-events: none;
+}
+
+/* ===== NOSCRIPT ===== */
+noscript div {
+  text-align: center;
+  padding: 20px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  margin: 10px auto;
+  max-width: 512px;
+  color: #856404;
+}
+</style>
+</head>
+<body>
+
+<h2>网易云热评</h2>
+
+<noscript>
+  <div>⚠️ 您的浏览器未启用 JavaScript。留言板需要 JavaScript 才能正常工作，请在浏览器设置中启用 JavaScript 后刷新页面。</div>
+</noscript>
+
+<div id="div1">
+  <!-- Input Area -->
+  <div id="input-area">
+    <input type="text" id="nick-input"
+           placeholder="你的昵称（选填，默认：指尖微凉*）"
+           maxlength="20"
+           aria-label="昵称输入框">
+    <textarea id="txt" rows="4"
+              placeholder="写下你的评论..."
+              maxlength="1000"
+              aria-label="评论输入框"></textarea>
+    <div id="char-count">0 / 1000</div>
+    <div id="btn-row">
+      <span id="status-msg" role="status" aria-live="polite"></span>
+      <input type="button" value="评论" id="btn1" aria-label="提交评论">
+    </div>
+  </div>
+
+  <!-- Comment List -->
+  <ul id="ul1" role="list" aria-label="评论列表">
+    <li class="empty-state">暂无评论，快来发表第一条吧 ✨</li>
+  </ul>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  /* ================================================================
+   *  DEBUG LOGGING SYSTEM
+   *  Comprehensive debug logging for every action, state change,
+   *  error path, and edge case. Set DEBUG=false to disable.
+   * ================================================================ */
+  var DEBUG = true;
+  var commentCounter = 0;   // tracks total comments ever created
+  var activeComments = 0;   // tracks current visible comments
+  var isSubmitting = false; // debounce guard for submit
+  var STORAGE_KEY = 'netease-comments'; // localStorage key for persistence
+
+  function log(category, action, detail) {
+    if (!DEBUG) return;
+    var ts = new Date().toISOString().slice(11, 23);
+    try {
+      console.groupCollapsed(
+        '%c[' + ts + '] %c' + category + '%c ' + action,
+        'color:#888', 'color:#c62f2f;font-weight:bold', 'color:#333'
+      );
+      if (detail !== undefined) {
+        if (typeof detail === 'object') {
+          console.log(JSON.stringify(detail, null, 2));
+        } else {
+          console.log(detail);
+        }
+      }
+      console.log('activeComments:', activeComments, '| commentCounter:', commentCounter, '| isSubmitting:', isSubmitting);
+      console.groupEnd();
+    } catch(e) {
+      // fallback: plain log if console.groupCollapsed fails
+      console.log('[' + ts + '] [' + category + '] ' + action,
+        detail !== undefined ? detail : '',
+        '{ activeComments:', activeComments, ', commentCounter:', commentCounter, '}');
+    }
+  }
+
+  function logError(category, action, err) {
+    try {
+      console.groupCollapsed(
+        '%c[ERROR] %c' + category + '%c ' + action,
+        'color:red;font-weight:bold', 'color:#c62f2f;font-weight:bold', 'color:red'
+      );
+      console.error('Message:', err.message || String(err));
+      console.error('Stack:', err.stack || 'no stack');
+      console.error('Type:', typeof err);
+      console.log('State — activeComments:', activeComments, '| commentCounter:', commentCounter, '| isSubmitting:', isSubmitting);
+      console.groupEnd();
+    } catch(e2) {
+      console.error('[ERROR] [' + category + '] ' + action, err);
+    }
+  }
+
+  function snapshotState(label) {
+    if (!DEBUG) return;
+    var oUl1 = document.getElementById('ul1');
+    var items = oUl1 ? oUl1.querySelectorAll('li:not(.empty-state)') : [];
+    log('STATE', label, {
+      totalLiElements: items.length,
+      activeComments: activeComments,
+      commentCounter: commentCounter,
+      emptyStateVisible: oUl1 ? !!oUl1.querySelector('.empty-state') : 'ul1-null',
+      buttonDisabled: document.getElementById('btn1') ? document.getElementById('btn1').disabled : 'btn1-null',
+      textareaValue: document.getElementById('txt') ? document.getElementById('txt').value.substring(0, 50) : 'txt-null'
+    });
+  }
+
+  /* ================================================================
+   *  PERSISTENCE: localStorage save/load
+   *  Serializes all visible comments to JSON so they survive refresh.
+   *  Falls back silently if localStorage is unavailable or full.
+   * ================================================================ */
+  function saveComments() {
+    try {
+      var items = document.querySelectorAll('#ul1 li:not(.empty-state)');
+      var comments = [];
+      for (var i = 0; i < items.length; i++) {
+        var nick = items[i].querySelector('.nicheng');
+        var text = items[i].querySelector('.pinglun');
+        var time = items[i].querySelector('.shijian span');
+        if (text) {
+          comments.push({
+            nickname: nick ? nick.textContent : '指尖微凉*',
+            text: text.textContent || '',
+            dateStr: time ? time.textContent.replace('评论时间  ', '') : ''
+          });
+        }
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(comments));
+      log('STORAGE', 'saved ' + comments.length + ' comments to localStorage');
+    } catch(e) {
+      logError('STORAGE', 'save failed (storage full or unavailable)', e);
+    }
+  }
+
+  function loadComments() {
+    try {
+      var data = localStorage.getItem(STORAGE_KEY);
+      if (!data) return [];
+      var parsed = JSON.parse(data);
+      if (!Array.isArray(parsed)) return [];
+      log('STORAGE', 'loaded ' + parsed.length + ' comments from localStorage');
+      return parsed;
+    } catch(e) {
+      logError('STORAGE', 'load failed', e);
+      return [];
+    }
+  }
+
+  function renderStoredComment(comment) {
+    var oUl1 = document.getElementById('ul1');
+    if (!oUl1) return;
+
+    var safeNickname = sanitize(comment.nickname || '指尖微凉*');
+    var safeText = sanitize(comment.text || '');
+    var safeDate = comment.dateStr || getDateString();
+
+    var oBox = document.createElement('div');
+    if (!oBox) return;
+    oBox.className = 'box';
+
+    var avatar = document.createElement('div');
+    avatar.className = 'touxiang';
+    avatar.textContent = '🎵';
+    avatar.setAttribute('aria-hidden', 'true');
+    oBox.appendChild(avatar);
+
+    var nickDiv = document.createElement('div');
+    nickDiv.className = 'nicheng';
+    nickDiv.textContent = safeNickname;
+    oBox.appendChild(nickDiv);
+
+    var commentDiv = document.createElement('div');
+    commentDiv.className = 'pinglun';
+    commentDiv.textContent = safeText;
+    oBox.appendChild(commentDiv);
+
+    var timeDiv = document.createElement('div');
+    timeDiv.className = 'shijian';
+
+    var timeSpan = document.createElement('span');
+    timeSpan.textContent = '评论时间  ' + safeDate;
+    timeDiv.appendChild(timeSpan);
+
+    var deleteLink = document.createElement('a');
+    deleteLink.className = 'delete-link';
+    deleteLink.href = 'javascript:void(0)';
+    deleteLink.textContent = '删除';
+    deleteLink.setAttribute('role', 'button');
+    deleteLink.setAttribute('aria-label', '删除这条评论');
+    deleteLink.setAttribute('tabindex', '0');
+
+    deleteLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      deleteCommentBox(oBox);
+    });
+    deleteLink.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        deleteCommentBox(oBox);
+      }
+    });
+
+    timeDiv.appendChild(deleteLink);
+    oBox.appendChild(timeDiv);
+
+    var li = document.createElement('li');
+    li.appendChild(oBox);
+    oUl1.appendChild(li);
+
+    commentCounter++;
+    activeComments++;
+  }
+
+  /* ================================================================
+   *  UTILITY: HTML ESCAPE (XSS prevention)
+   * ================================================================ */
+  function escapeHtml(str) {
+    if (typeof str !== 'string') {
+      log('ESCAPE', 'non-string input', { type: typeof str, value: String(str) });
+      str = String(str);
+    }
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
+  /* ================================================================
+   *  UTILITY: SANITIZE (strip HTML tags for safety, then escape)
+   * ================================================================ */
+  function sanitize(str) {
+    if (typeof str !== 'string') {
+      log('SANITIZE', 'non-string input, coercing', { type: typeof str });
+      str = String(str);
+    }
+    // Strip any HTML tags
+    var stripped = str.replace(/<[^>]*>/g, '');
+    if (stripped !== str) {
+      log('SANITIZE', 'HTML tags stripped from input', {
+        originalLength: str.length,
+        strippedLength: stripped.length,
+        preview: str.substring(0, 40)
+      });
+    }
+    return escapeHtml(stripped);
+  }
+
+  /* ================================================================
+   *  UTILITY: GET CURRENT DATE STRING
+   * ================================================================ */
+  function getDateString() {
+    try {
+      var now = new Date();
+      // Validate date is reasonable
+      if (isNaN(now.getTime())) {
+        log('DATE', 'Invalid Date object, using fallback', { now: String(now) });
+        return '未知时间';
+      }
+      return now.getFullYear() + '年' +
+             (now.getMonth() + 1) + '月' +
+             now.getDate() + '日 ' +
+             ('0' + now.getHours()).slice(-2) + ':' +
+             ('0' + now.getMinutes()).slice(-2);
+    } catch(e) {
+      logError('DATE', 'Date construction failed', e);
+      return '未知时间';
+    }
+  }
+
+  /* ================================================================
+   *  UTILITY: SHOW STATUS MESSAGE
+   * ================================================================ */
+  var statusTimer = null;
+  function showStatus(msg, isError) {
+    log('STATUS', isError ? 'ERROR' : 'INFO', msg);
+    var el = document.getElementById('status-msg');
+    if (!el) {
+      logError('STATUS', 'status-msg element not found', new Error('missing #status-msg'));
+      return;
+    }
+    el.textContent = msg;
+    el.style.color = isError ? '#c62f2f' : '#27ae60';
+    // Auto-clear after 4 seconds
+    if (statusTimer) clearTimeout(statusTimer);
+    statusTimer = setTimeout(function() {
+      if (el) el.textContent = '';
+    }, 4000);
+  }
+
+  /* ================================================================
+   *  UTILITY: UPDATE EMPTY STATE VISIBILITY
+   * ================================================================ */
+  function updateEmptyState() {
+    var oUl1 = document.getElementById('ul1');
+    if (!oUl1) {
+      logError('EMPTY_STATE', 'ul1 element not found', new Error('missing #ul1'));
+      return;
+    }
+    var comments = oUl1.querySelectorAll('li:not(.empty-state)');
+    var emptyEl = oUl1.querySelector('.empty-state');
+
+    log('EMPTY_STATE', 'check', { commentCount: comments.length, emptyStateExists: !!emptyEl });
+
+    if (comments.length === 0) {
+      if (!emptyEl) {
+        var li = document.createElement('li');
+        li.className = 'empty-state';
+        li.textContent = '暂无评论，快来发表第一条吧 ✨';
+        li.setAttribute('aria-live', 'polite');
+        oUl1.appendChild(li);
+        log('EMPTY_STATE', 'created empty-state element');
+      }
+    } else {
+      if (emptyEl) {
+        emptyEl.parentNode.removeChild(emptyEl);
+        log('EMPTY_STATE', 'removed empty-state element (comments exist)');
+      }
+    }
+  }
+
+  /* ================================================================
+   *  UTILITY: SET BUTTON STATE
+   * ================================================================ */
+  function setButtonDisabled(disabled, reason) {
+    var btn = document.getElementById('btn1');
+    if (!btn) {
+      logError('BUTTON', 'btn1 element not found, cannot set disabled=' + disabled, new Error('missing #btn1'));
+      return;
+    }
+    var prev = btn.disabled;
+    btn.disabled = disabled;
+    log('BUTTON', 'disabled=' + disabled + ' (was ' + prev + ')', reason);
+  }
+
+  /* ================================================================
+   *  CHARACTER COUNT UPDATE
+   * ================================================================ */
+  function updateCharCount() {
+    var txt = document.getElementById('txt');
+    var countEl = document.getElementById('char-count');
+    if (!txt || !countEl) {
+      log('CHAR_COUNT', 'elements not found', { txt: !!txt, countEl: !!countEl });
+      return;
+    }
+    var len = txt.value.length;
+    var max = parseInt(txt.getAttribute('maxlength'), 10) || 1000;
+    countEl.textContent = len + ' / ' + max;
+    countEl.className = '';
+    if (len > max * 0.9 && len <= max) {
+      countEl.className = 'warn';
+    } else if (len > max) {
+      countEl.className = 'over';
+      countEl.textContent = len + ' / ' + max + ' (超出限制)';
+    }
+    log('CHAR_COUNT', 'updated', { length: len, max: max, className: countEl.className });
+  }
+
+  /* ================================================================
+   *  VALIDATE INPUT
+   *  Returns: { valid: boolean, reason: string, trimmed: string }
+   * ================================================================ */
+  function validateInput(raw) {
+    log('VALIDATE', 'start', { rawLength: raw.length, rawPreview: raw.substring(0, 30) });
+
+    // Case: null or undefined
+    if (raw === null || raw === undefined) {
+      log('VALIDATE', 'FAIL: null/undefined input');
+      return { valid: false, reason: '输入为空', trimmed: '' };
+    }
+
+    // Case: not a string
+    if (typeof raw !== 'string') {
+      log('VALIDATE', 'non-string input, coercing', { type: typeof raw });
+      raw = String(raw);
+    }
+
+    // Case: completely empty
+    if (raw.length === 0) {
+      log('VALIDATE', 'FAIL: empty string (length 0)');
+      return { valid: false, reason: '请输入评论内容', trimmed: '' };
+    }
+
+    // Case: only whitespace
+    var trimmed = raw.trim();
+    if (trimmed.length === 0) {
+      log('VALIDATE', 'FAIL: whitespace-only input', { rawLength: raw.length });
+      return { valid: false, reason: '评论内容不能全为空格', trimmed: '' };
+    }
+
+    // Case: exceeds max length (check after trim)
+    if (trimmed.length > 1000) {
+      log('VALIDATE', 'FAIL: exceeds max length', { trimmedLength: trimmed.length, max: 1000 });
+      return { valid: false, reason: '评论内容过长，最多1000字', trimmed: trimmed.substring(0, 1000) };
+    }
+
+    // Case: valid input
+    log('VALIDATE', 'PASS', { trimmedLength: trimmed.length });
+    return { valid: true, reason: '', trimmed: trimmed };
+  }
+
+  /* ================================================================
+   *  CORE: ADD COMMENT
+   *  Handles EVERY edge case:
+   *    - null/missing DOM elements
+   *    - empty/whitespace input
+   *    - HTML/script injection (XSS)
+   *    - rapid double-click (debounce)
+   *    - DOM creation failure
+   *    - append failure
+   *    - very long text
+   *    - special characters / emoji
+   * ================================================================ */
+  function addComment() {
+    log('ADD_COMMENT', '===== START =====');
+
+    // ---- Guard: debounce rapid clicks ----
+    if (isSubmitting) {
+      log('ADD_COMMENT', 'BLOCKED: already submitting (debounce guard)');
+      showStatus('请稍候，正在提交中...', true);
+      return;
+    }
+
+    // ---- Guard: get DOM elements ----
+    var oTxt = document.getElementById('txt');
+    var oUl1 = document.getElementById('ul1');
+    var nickInput = document.getElementById('nick-input');
+
+    if (!oTxt) {
+      logError('ADD_COMMENT', 'textarea #txt not found — aborting', new Error('missing #txt'));
+      showStatus('页面加载异常，请刷新页面', true);
+      return;
+    }
+    if (!oUl1) {
+      logError('ADD_COMMENT', 'ul #ul1 not found — aborting', new Error('missing #ul1'));
+      showStatus('页面加载异常，请刷新页面', true);
+      return;
+    }
+
+    // ---- Set debounce flag ----
+    isSubmitting = true;
+    setButtonDisabled(true, 'submitting');
+
+    try {
+      // ---- Validate input ----
+      var rawValue = oTxt.value;
+      var validation = validateInput(rawValue);
+
+      if (!validation.valid) {
+        log('ADD_COMMENT', 'VALIDATION FAILED', validation.reason);
+        showStatus(validation.reason, true);
+        oTxt.focus();
+        return;  // will hit finally block
+      }
+
+      var commentText = validation.trimmed;
+
+      // ---- Get nickname ----
+      var nickname = '指尖微凉*';
+      if (nickInput && nickInput.value.trim().length > 0) {
+        nickname = nickInput.value.trim().substring(0, 20);
+        log('ADD_COMMENT', 'custom nickname used', { nickname: nickname });
+      } else {
+        log('ADD_COMMENT', 'default nickname used', { nickname: nickname });
+      }
+
+      // ---- Sanitize all user inputs (XSS protection) ----
+      var safeComment = sanitize(commentText);
+      var safeNickname = sanitize(nickname);
+      var safeDate = getDateString();
+
+      log('ADD_COMMENT', 'inputs sanitized', {
+        safeCommentLength: safeComment.length,
+        safeNickname: safeNickname,
+        safeDate: safeDate
+      });
+
+      // ---- Create comment box ----
+      var oBox = document.createElement('div');
+      if (!oBox) {
+        logError('ADD_COMMENT', 'createElement returned null for div.box', new Error('createElement failed'));
+        showStatus('创建评论失败，请重试', true);
+        return;
+      }
+      oBox.className = 'box';
+
+      // Avatar (using emoji instead of missing image)
+      var avatar = document.createElement('div');
+      avatar.className = 'touxiang';
+      avatar.textContent = '🎵';
+      avatar.setAttribute('aria-hidden', 'true');
+      oBox.appendChild(avatar);
+
+      // Nickname
+      var nickDiv = document.createElement('div');
+      nickDiv.className = 'nicheng';
+      nickDiv.textContent = safeNickname;
+      oBox.appendChild(nickDiv);
+
+      // Comment text (use textContent to prevent XSS)
+      var commentDiv = document.createElement('div');
+      commentDiv.className = 'pinglun';
+      commentDiv.textContent = commentText;  // safe: textContent auto-escapes
+      oBox.appendChild(commentDiv);
+
+      // Time + delete link
+      var timeDiv = document.createElement('div');
+      timeDiv.className = 'shijian';
+
+      var timeSpan = document.createElement('span');
+      timeSpan.textContent = '评论时间  ' + safeDate;
+      timeDiv.appendChild(timeSpan);
+
+      var deleteLink = document.createElement('a');
+      deleteLink.className = 'delete-link';
+      deleteLink.href = 'javascript:void(0)';
+      deleteLink.textContent = '删除';
+      deleteLink.setAttribute('role', 'button');
+      deleteLink.setAttribute('aria-label', '删除这条评论');
+      deleteLink.setAttribute('tabindex', '0');
+
+      // ---- DELETE HANDLER (fixed: remove entire box, not self-referencing removeChild) ----
+      deleteLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        log('DELETE', 'click on delete link', { commentBoxExists: !!oBox });
+        deleteCommentBox(oBox);
+      });
+      // Keyboard accessibility: Enter/Space on focused delete link
+      deleteLink.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          log('DELETE', 'keyboard delete (key=' + e.key + ')', { commentBoxExists: !!oBox });
+          deleteCommentBox(oBox);
+        }
+      });
+
+      timeDiv.appendChild(deleteLink);
+      oBox.appendChild(timeDiv);
+
+      // ---- Wrap in <li> and append ----
+      var li = document.createElement('li');
+      li.appendChild(oBox);
+
+      // Remove empty state if present
+      updateEmptyState();
+
+      // Append to list
+      try {
+        oUl1.appendChild(li);
+      } catch(appendErr) {
+        logError('ADD_COMMENT', 'appendChild failed for comment li', appendErr);
+        showStatus('添加评论失败，请重试', true);
+        return;
+      }
+
+      // ---- Update counters ----
+      commentCounter++;
+      activeComments++;
+      log('ADD_COMMENT', 'SUCCESS — comment appended', {
+        commentCounter: commentCounter,
+        activeComments: activeComments,
+        commentPreview: commentText.substring(0, 30)
+      });
+
+      // ---- Clear input ----
+      oTxt.value = '';
+      if (nickInput) nickInput.value = '';
+      updateCharCount();
+      showStatus('评论发表成功！', false);
+      saveComments();
+
+      // ---- Focus back to textarea for next comment ----
+      oTxt.focus();
+
+      // ---- Snapshot final state ----
+      snapshotState('after addComment');
+
+    } catch(err) {
+      logError('ADD_COMMENT', 'UNHANDLED EXCEPTION in addComment', err);
+      showStatus('发生未知错误，请刷新页面后重试', true);
+    } finally {
+      // ---- ALWAYS reset debounce and button ----
+      isSubmitting = false;
+      setButtonDisabled(false, 'done');
+      log('ADD_COMMENT', '===== END (isSubmitting=' + isSubmitting + ') =====');
+    }
+  }
+
+  /* ================================================================
+   *  CORE: DELETE COMMENT BOX
+   *  Edge cases handled:
+   *    - box is null/undefined
+   *    - box already removed from DOM
+   *    - box has no parent node
+   *    - rapid double-click (guard via .deleting class)
+   *    - last comment → show empty state
+   *    - removeChild throws exception
+   * ================================================================ */
+  function deleteCommentBox(oBox) {
+    log('DELETE_BOX', '===== START =====');
+
+    // Guard: null/undefined box
+    if (!oBox) {
+      log('DELETE_BOX', 'BLOCKED: oBox is null/undefined');
+      return;
+    }
+
+    // Guard: already being deleted (rapid double-click protection)
+    if (oBox.classList.contains('deleting')) {
+      log('DELETE_BOX', 'BLOCKED: box already in deleting state (double-click guard)');
+      return;
+    }
+
+    // Guard: check parent exists
+    var li = oBox.parentNode;
+    if (!li || li.nodeName !== 'LI') {
+      log('DELETE_BOX', 'BLOCKED: box parent is not a LI element', {
+        parentExists: !!li,
+        parentNodeName: li ? li.nodeName : 'null'
+      });
+      return;
+    }
+
+    var oUl1 = li.parentNode;
+    if (!oUl1 || oUl1.id !== 'ul1') {
+      log('DELETE_BOX', 'BLOCKED: LI parent is not ul1', {
+        parentExists: !!oUl1,
+        parentId: oUl1 ? oUl1.id : 'null'
+      });
+      return;
+    }
+
+    // Mark as deleting (prevents double-delete and enables animation)
+    oBox.classList.add('deleting');
+    log('DELETE_BOX', 'marked as deleting');
+
+    // Remove after animation completes
+    try {
+      setTimeout(function() {
+        try {
+          // Double-check box still has a parent before removing
+          if (li.parentNode === oUl1) {
+            oUl1.removeChild(li);
+            activeComments = Math.max(0, activeComments - 1);
+            log('DELETE_BOX', 'SUCCESS — box removed from DOM', {
+              activeComments: activeComments,
+              commentCounter: commentCounter
+            });
+
+            // Update empty state if no comments remain
+            updateEmptyState();
+            snapshotState('after deleteCommentBox');
+
+            showStatus('评论已删除', false);
+            saveComments();
+          } else {
+            log('DELETE_BOX', 'box was already removed from DOM before timeout');
+          }
+        } catch(innerErr) {
+          logError('DELETE_BOX', 'removeChild failed in timeout', innerErr);
+          // Force cleanup: remove deleting class so user can try again
+          oBox.classList.remove('deleting');
+          showStatus('删除失败，请重试', true);
+        }
+      }, 250); // match CSS transition duration
+
+    } catch(err) {
+      logError('DELETE_BOX', 'setTimeout setup failed', err);
+      // Force immediate removal
+      try {
+        if (li.parentNode === oUl1) {
+          oUl1.removeChild(li);
+          activeComments = Math.max(0, activeComments - 1);
+          log('DELETE_BOX', 'forced immediate removal after error');
+          updateEmptyState();
+          saveComments();
+        }
+      } catch(forceErr) {
+        logError('DELETE_BOX', 'forced removal also failed', forceErr);
+      }
+      oBox.classList.remove('deleting');
+    }
+
+    log('DELETE_BOX', '===== END =====');
+  }
+
+  /* ================================================================
+   *  INITIALIZATION — runs when DOM is ready
+   *  Handles: missing elements, no-JS fallback, binding events
+   * ================================================================ */
+  function init() {
+    log('INIT', '===== START =====');
+
+    // ---- Get DOM references ----
+    var oTxt = document.getElementById('txt');
+    var oBtn = document.getElementById('btn1');
+    var oUl1 = document.getElementById('ul1');
+    var nickInput = document.getElementById('nick-input');
+    var countEl = document.getElementById('char-count');
+
+    // ---- Validation: check all required elements exist ----
+    var missingElements = [];
+    if (!oTxt) missingElements.push('#txt (textarea)');
+    if (!oBtn) missingElements.push('#btn1 (button)');
+    if (!oUl1) missingElements.push('#ul1 (list)');
+    if (!nickInput) missingElements.push('#nick-input');
+    if (!countEl) missingElements.push('#char-count');
+
+    if (missingElements.length > 0) {
+      logError('INIT', 'MISSING DOM ELEMENTS: ' + missingElements.join(', '),
+               new Error('missing elements'));
+      // If critical elements missing, abort init
+      if (!oTxt || !oBtn || !oUl1) {
+        console.error('[FATAL] Cannot initialize — critical DOM elements missing: ' + missingElements.join(', '));
+        return;
+      }
+    }
+
+    log('INIT', 'all DOM elements found', {
+      txt: !!oTxt,
+      btn: !!oBtn,
+      ul1: !!oUl1,
+      nickInput: !!nickInput,
+      countEl: !!countEl
+    });
+
+    // ---- Bind: Comment button click ----
+    oBtn.addEventListener('click', function(e) {
+      log('EVENT', 'button click');
+      addComment();
+    });
+
+    // ---- Bind: Enter key in textarea (Enter = submit, Shift+Enter = newline) ----
+    oTxt.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        log('EVENT', 'Enter key pressed (submit)');
+        addComment();
+      } else if (e.key === 'Enter' && e.shiftKey) {
+        log('EVENT', 'Shift+Enter pressed (newline, no submit)');
+      }
+    });
+
+    // ---- Bind: Character count update ----
+    oTxt.addEventListener('input', function() {
+      updateCharCount();
+    });
+
+    // ---- Bind: Nickname Enter key also submits ----
+    if (nickInput) {
+      nickInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          log('EVENT', 'Enter key in nickname input (focus textarea and submit)');
+          oTxt.focus();
+          // Small delay so textarea gets focus first
+          setTimeout(function() { addComment(); }, 50);
+        }
+      });
+    }
+
+    // ---- Restore persisted comments from localStorage ----
+    var stored = loadComments();
+    for (var i = 0; i < stored.length; i++) {
+      renderStoredComment(stored[i]);
+    }
+    log('INIT', 'restored comments from storage', { count: stored.length });
+
+    // ---- Initialize empty state ----
+    updateEmptyState();
+    updateCharCount();
+
+    // ---- Initial state snapshot ----
+    snapshotState('init complete');
+
+    log('INIT', '===== END (ready) =====');
+    console.log('%c🎵 网易云热评留言板已就绪 %c| %cDEBUG=' + DEBUG,
+                'font-size:14px;color:#c62f2f',
+                '',
+                'color:#888');
+    console.log('%c输入评论后点击"评论"或按 Enter 提交 | Shift+Enter 换行',
+                'color:#666;font-size:11px');
+  }
+
+  // ---- Bootstrap: run init when DOM is ready ----
+  if (document.readyState === 'loading') {
+    log('BOOTSTRAP', 'DOM still loading, adding DOMContentLoaded listener');
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    log('BOOTSTRAP', 'DOM already loaded (' + document.readyState + '), running init immediately');
+    init();
+  }
+
+  // ---- Global error catch: log any unhandled errors ----
+  window.addEventListener('error', function(e) {
+    logError('GLOBAL', 'unhandled error', {
+      message: e.message,
+      filename: e.filename,
+      lineno: e.lineno,
+      colno: e.colno,
+      error: e.error ? e.error.stack : 'no error object'
+    });
+  });
+
+  // ---- Global unhandled promise rejection ----
+  window.addEventListener('unhandledrejection', function(e) {
+    logError('GLOBAL', 'unhandled promise rejection', {
+      reason: e.reason ? (e.reason.message || String(e.reason)) : 'no reason'
+    });
+  });
+
+  // ---- Before unload: warn if there's unsaved text ----
+  window.addEventListener('beforeunload', function(e) {
+    var txt = document.getElementById('txt');
+    if (txt && txt.value.trim().length > 0) {
+      log('BEFOREUNLOAD', 'unsaved text in textarea, triggering confirm dialog');
+      // Modern browsers ignore custom messages for security; they show a generic prompt
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>
