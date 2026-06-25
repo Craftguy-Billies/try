@@ -47,8 +47,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _handleSkip() {
     _logger.logButton('Onboarding', 'Skip', data: {'from_page': _currentPage});
-    _logger.logEdge('Onboarding', 'User skipped onboarding — BUG: not persisted');
+    _logger.logEdge('Onboarding', 'User skipped onboarding');
     StorageService().setOnboardingCompleted();
+    _logger.logNavigate('Onboarding', '/home', method: 'pushReplacement');
     Navigator.pushReplacementNamed(context, '/home');
   }
 
@@ -58,8 +59,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
     } else {
       _logger.logButton('Onboarding', 'Get Started', data: {'from_page': _currentPage});
-      _logger.logEdge('Onboarding', 'User completed onboarding — BUG: not persisted in original code');
+      _logger.logEdge('Onboarding', 'User completed onboarding');
       StorageService().setOnboardingCompleted();
+      _logger.logNavigate('Onboarding', '/home', method: 'pushReplacement');
       Navigator.pushReplacementNamed(context, '/home');
     }
   }

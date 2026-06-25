@@ -27,6 +27,15 @@ class _GrammarLessonScreenState extends State<GrammarLessonScreen> {
   }
 
   @override
+  void dispose() {
+    _logger.logDispose('GrammarLesson', data: {
+      'lessonId': widget.lesson.id, 'exerciseCompleted': _exerciseIdx,
+      'lastAnswer': _selected, 'correct': _correct,
+    });
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isFr = Localizations.localeOf(context).languageCode == 'fr';
     final lesson = widget.lesson;

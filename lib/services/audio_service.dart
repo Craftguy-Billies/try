@@ -47,6 +47,9 @@ class AudioService {
       });
     } catch (e, stack) {
       _logger.logAsyncFail('Audio', 'init', e, stack);
+      _logger.logRecover('Audio', 'init failure — TTS disabled, app continues without audio');
+      _initialized = false;
+      _tts = null;
     }
   }
 

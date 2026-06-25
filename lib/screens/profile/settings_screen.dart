@@ -1,17 +1,64 @@
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/audit_logger.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
 import '../../services/storage_service.dart';
+import '../home/home_screen.dart';
 import 'language_switch_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  final _logger = AuditLogger();
+  bool _darkMode = false;
+  bool _notificationsEnabled = true;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _logger.logInit('Settings');
+    _logger.logScreenView('Settings');
+    _loadPreferences();
+  }
+
+  @override
+  void dispose() {
+    _logger.logDispose('Settings', data: {'darkMode': _darkMode, 'notifications': _notificationsEnabled});
+    super.dispose();
+  }
+
+  Future<void> _loadPreferences() async {
+    _logger.logAsyncStart('Settings', 'loadPreferences');
+    try {
+      final dark = await StorageService().getDarkMode();
+      final notif = await StorageService().getNotificationsEnabled();
+      if (mounted) {
+        setState(() {
+          _darkMode = dark;
+          _notificationsEnabled = notif;
+          _loaded = true;
+        });
+        _logger.logAsyncDone('Settings', 'loadPreferences', data: {
+          'darkMode': _darkMode, 'notifications': _notificationsEnabled,
+        });
+      }
+    } catch (e, stack) {
+      _logger.logAsyncFail('Settings', 'loadPreferences', e, stack);
+      _logger.logRecover('Settings', 'pref load failed — using defaults');
+      if (mounted) setState(() => _loaded = true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final _logger = AuditLogger(); _logger.logScreenView('Settings'); final t = Translations(Localizations.localeOf(context).languageCode);
+    final t = Translations(Localizations.localeOf(context).languageCode);
     final lang = AppLanguage.fromCode(Localizations.localeOf(context).languageCode);
 
     return Scaffold(
@@ -27,11 +74,13 @@ class SettingsScreen extends StatelessWidget {
           title: Text(t.get('language')),
           subtitle: Text('${lang.nativeName} (${lang.name})'),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () async { _logger.logTap('Settings', 'Language');
+          onTap: () async {
+            _logger.logTap('Settings', 'Language');
             final changed = await Navigator.push<bool>(context,
               MaterialPageRoute(builder: (_) => const LanguageSwitchScreen()));
             if (changed == true && context.mounted) {
-              _logger.logEdge('Settings', 'language-changed-but-no-rebuild'); // Router handles rebuild
+              _logger.logEdge('Settings', 'language changed — app rebuilds via router');
+              setState(() {}); // Force rebuild to reflect new language in subtitle
             }
           })),
         Card(child: SwitchListTile(
@@ -39,13 +88,23 @@ class SettingsScreen extends StatelessWidget {
             decoration: BoxDecoration(color: AppColors.primary.withAlpha(20), borderRadius: BorderRadius.circular(10)),
             child: const Icon(Icons.dark_mode, color: AppColors.primary)),
           title: Text(t.get('dark_mode')),
-          value: false, onChanged: (_) { _logger.logToggle('Settings', 'darkMode', false); _logger.logEdge('Settings', 'darkMode-toggle-is-dead'); })),
+          value: _darkMode,
+          onChanged: _loaded ? (v) {
+            _logger.logToggle('Settings', 'darkMode', v, data: {'was': _darkMode});
+            setState(() => _darkMode = v);
+            StorageService().setDarkMode(v);
+          } : null)),
         Card(child: SwitchListTile(
           secondary: Container(width: 40, height: 40, alignment: Alignment.center,
             decoration: BoxDecoration(color: AppColors.primary.withAlpha(20), borderRadius: BorderRadius.circular(10)),
             child: const Icon(Icons.notifications, color: AppColors.primary)),
           title: Text(t.get('notifications')),
-          value: true, onChanged: (_) { _logger.logToggle('Settings', 'notifications', true); _logger.logEdge('Settings', 'notifications-toggle-is-dead'); })),
+          value: _notificationsEnabled,
+          onChanged: _loaded ? (v) {
+            _logger.logToggle('Settings', 'notifications', v, data: {'was': _notificationsEnabled});
+            setState(() => _notificationsEnabled = v);
+            StorageService().setNotificationsEnabled(v);
+          } : null)),
         const SizedBox(height: 24),
         Text('Data', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         const SizedBox(height: 8),
@@ -68,8 +127,10 @@ class SettingsScreen extends StatelessWidget {
               ],
             ));
             if (confirmed == true && context.mounted) {
-              await StorageService().clearAll();
+              _logger.logUserAction('ClearAllData confirmed');
+              await context.read<UserProgressProvider>().resetAll();
               if (context.mounted) {
+                setState(() { _darkMode = false; _notificationsEnabled = true; });
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('All data cleared')));
               }
             }

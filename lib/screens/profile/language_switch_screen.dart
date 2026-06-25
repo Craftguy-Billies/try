@@ -4,6 +4,7 @@ import '../../services/audit_logger.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
 import '../../services/storage_service.dart';
+import '../../app.dart';
 
 class LanguageSwitchScreen extends StatelessWidget {
   const LanguageSwitchScreen({super.key});
@@ -26,8 +27,11 @@ class LanguageSwitchScreen extends StatelessWidget {
               title: Text(lang.nativeName, style: TextStyle(fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
               subtitle: Text(lang.name),
               trailing: selected ? const Icon(Icons.check_circle, color: AppColors.success) : null,
-              onTap: selected ? null : () { _logger.logTap('LanguageSwitch', '${lang.code}'); _logger.logEdge('LanguageSwitch', 'lang-change-not-calling-app-state');
+              onTap: selected ? null : () {
+                _logger.logTap('LanguageSwitch', '${lang.code}');
+                _logger.logNavigate('LanguageSwitch', 'app.changeLanguage(${lang.code})', method: 'callback');
                 StorageService().setLanguage(lang.code);
+                FrenchLearnApp.of(context)!.changeLanguage(lang.code);
                 Navigator.pop(context, true);
               },
             ));

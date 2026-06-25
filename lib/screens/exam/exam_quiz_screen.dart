@@ -124,7 +124,10 @@ class _ExamQuizScreenState extends State<ExamQuizScreen> {
   }
 
   void _selectAnswer(String opt) {
-    if (_submitted) return;
+    if (_submitted) {
+      _logger.logGuard('ExamQuiz', 'answer-after-submit', data: {'question': _current, 'selected': opt});
+      return;
+    }
     final prev = _answers[_current];
     _logger.logTap('ExamQuiz', 'answer:${_current}', data: {
       'prev': prev, 'selected': opt, 'isChange': prev != null && prev != opt,

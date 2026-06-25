@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
 import '../../services/audit_logger.dart';
+import '../../services/storage_service.dart';
+import '../../models/user_progress.dart';
 import '../../services/vocabulary_service.dart';
 import '../../widgets/progress_card.dart';
 import '../../widgets/category_card.dart';
@@ -109,9 +111,64 @@ class UserProgressProvider extends ChangeNotifier {
   int totalWordsLearned = 0;
   int totalMinutesPracticed = 0;
   int currentStreak = 0;
+  int longestStreak = 0;
   int dailyGoalWords = 20;
+  DateTime? _lastPracticeDate;
+  bool _loaded = false;
   final Map<String, int> categoryProgress = {};
   final Map<String, bool> completedWords = {};
+
+  bool get isLoaded => _loaded;
+
+  Future<void> loadFromStorage() async {
+    _logger.logAsyncStart('Progress', 'loadFromStorage');
+    try {
+      final stored = await StorageService().loadProgress();
+      totalWordsLearned = stored.totalWordsLearned;
+      totalMinutesPracticed = stored.totalMinutesPracticed;
+      currentStreak = stored.currentStreak;
+      longestStreak = stored.longestStreak;
+      dailyGoalWords = stored.dailyGoalWords;
+      _lastPracticeDate = stored.lastPracticeDate;
+      categoryProgress.addAll(stored.categoryProgress);
+      completedWords.addAll(stored.completedWords);
+      _loaded = true;
+      notifyListeners();
+      _logger.logAsyncDone('Progress', 'loadFromStorage', data: {
+        'words': totalWordsLearned, 'streak': currentStreak,
+        'minutes': totalMinutesPracticed, 'completedCount': completedWords.length,
+      });
+    } catch (e, stack) {
+      _logger.logAsyncFail('Progress', 'loadFromStorage', e, stack);
+      _logger.logRecover('Progress', 'load failure — using defaults');
+      _loaded = true;
+    }
+  }
+
+  Future<void> _saveToStorage() async {
+    _logger.logAsyncStart('Progress', 'saveToStorage');
+    try {
+      await StorageService().saveProgress(_toUserProgress());
+      _logger.logAsyncDone('Progress', 'saveToStorage', data: {
+        'words': totalWordsLearned, 'streak': currentStreak,
+      });
+    } catch (e, stack) {
+      _logger.logAsyncFail('Progress', 'saveToStorage', e, stack);
+    }
+  }
+
+  UserProgress _toUserProgress() {
+    return UserProgress(
+      totalWordsLearned: totalWordsLearned,
+      totalMinutesPracticed: totalMinutesPracticed,
+      currentStreak: currentStreak,
+      longestStreak: longestStreak,
+      lastPracticeDate: _lastPracticeDate,
+      categoryProgress: Map<String, int>.from(categoryProgress),
+      completedWords: Map<String, bool>.from(completedWords),
+      dailyGoalWords: dailyGoalWords,
+    );
+  }
 
   double getCategoryProgress(String catId, int total) {
     final done = categoryProgress[catId] ?? 0;
@@ -129,8 +186,9 @@ class UserProgressProvider extends ChangeNotifier {
     totalWordsLearned++;
     categoryProgress[categoryId] = (categoryProgress[categoryId] ?? 0) + 1;
     totalMinutesPracticed++;
-    updateStreak();
+    _updateStreak();
     notifyListeners();
+    _saveToStorage();
     _logger.logStateChangeInt('Progress', 'totalWordsLearned', oldWords, totalWordsLearned);
     _logger.logStateChangeInt('Progress', 'currentStreak', oldStreak, currentStreak);
     _logger.debug('Progress', 'markWordComplete', data: {
@@ -138,9 +196,32 @@ class UserProgressProvider extends ChangeNotifier {
     });
   }
 
-  void updateStreak() {
-    currentStreak = (currentStreak + 1);
-    _logger.debug('Progress', 'updateStreak → $currentStreak (simplistic — no date check)');
+  void _updateStreak() {
+    final now = DateTime.now();
+    if (_lastPracticeDate != null) {
+      final diff = now.difference(_lastPracticeDate!).inDays;
+      if (diff == 0) {
+        _logger.debug('Progress', 'updateStreak — same day, no change');
+        return; // Same day, don't increment
+      }
+      if (diff == 1) {
+        currentStreak++;
+        _logger.debug('Progress', 'updateStreak → $currentStreak (consecutive day)');
+      } else {
+        _logger.logEdge('Progress', 'streak-broken', data: {
+          'daysSince': diff, 'oldStreak': currentStreak,
+        });
+        currentStreak = 1;
+      }
+    } else {
+      currentStreak = 1;
+      _logger.debug('Progress', 'updateStreak → first day (streak started)');
+    }
+    if (currentStreak > longestStreak) {
+      longestStreak = currentStreak;
+      _logger.info('Progress', 'new longest streak: $longestStreak');
+    }
+    _lastPracticeDate = now;
     notifyListeners();
   }
 
@@ -149,15 +230,26 @@ class UserProgressProvider extends ChangeNotifier {
     totalMinutesPracticed += minutes;
     _logger.logStateChangeInt('Progress', 'totalMinutesPracticed', old, totalMinutesPracticed);
     notifyListeners();
+    _saveToStorage();
   }
 
-  void resetAll() {
-    _logger.logDataClear('ProgressProvider (in-memory)');
+  Future<void> resetAll() async {
+    _logger.logDataClear('ProgressProvider');
     totalWordsLearned = 0;
     totalMinutesPracticed = 0;
     currentStreak = 0;
+    longestStreak = 0;
+    _lastPracticeDate = null;
     categoryProgress.clear();
     completedWords.clear();
     notifyListeners();
+    try {
+      await StorageService().clearAll();
+      _logger.info('Progress', 'resetAll — storage cleared and in-memory reset');
+    } catch (e, stack) {
+      _logger.logAsyncFail('Progress', 'resetAll-storageClear', e, stack);
+    }
   }
+
+  int get totalLearned => completedWords.values.where((v) => v).length;
 }

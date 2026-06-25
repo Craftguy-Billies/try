@@ -27,6 +27,10 @@ class ExamResultScreen extends StatelessWidget {
       'score': score, 'correct': correct, 'total': total, 'passed': passed,
     });
 
+    if (total <= 0) {
+      _logger.logEdge('ExamResult', 'zero-total-division-guard', data: {'score': score, 'total': total});
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(t.get('exam_result')), automaticallyImplyLeading: false),
       body: SingleChildScrollView(padding: const EdgeInsets.all(16),
@@ -49,13 +53,14 @@ class ExamResultScreen extends StatelessWidget {
           const SizedBox(height: 16),
           SizedBox(height: 200, child: PieChart(PieChartData(
             sections: [
-              PieChartSectionData(value: correct.toDouble(), title: '${(correct/total*100).round()}%', color: AppColors.success, radius: 50, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+              PieChartSectionData(value: correct.toDouble(), title: total > 0 ? '${(correct/total*100).round()}%' : '0%', color: AppColors.success, radius: 50, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
               PieChartSectionData(value: (total - correct).toDouble(), color: AppColors.error.withAlpha(150), radius: 40),
             ], centerSpaceRadius: 30))),
           const SizedBox(height: 20),
           SizedBox(width: double.infinity, child: ElevatedButton(
             onPressed: () {
               _logger.logButton('ExamResult', 'Home');
+              _logger.logNavigate('ExamResult', '/home', method: 'pushAndRemoveAll');
               Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 16)),

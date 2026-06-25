@@ -15,6 +15,7 @@ import 'screens/grammar/grammar_list_screen.dart';
 import 'screens/phrases/phrases_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/profile/settings_screen.dart';
+import 'models/user_progress.dart';
 
 class FrenchLearnApp extends StatefulWidget {
   const FrenchLearnApp({super.key});
@@ -32,16 +33,22 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
   bool _initialized = false;
   String _initialRoute = '/onboarding';
   final _logger = AuditLogger();
+  UserProgressProvider? _progressProvider;
 
   Locale get locale => _locale;
 
   void changeLanguage(String code) {
+    if (_locale.languageCode == code) {
+      _logger.logGuardSkip('App', 'same-language', data: {'code': code});
+      return;
+    }
     final old = _locale.languageCode;
     setState(() {
       _locale = AppLanguage.fromCode(code).locale;
     });
     _logger.logStateChange('App', 'locale', old, code);
     _logger.logUserAction('Language changed to: $code');
+    StorageService().setLanguage(code);
   }
 
   @override
@@ -64,35 +71,65 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
     _logger.logLifecycle('App', 'lifecycle=${state.name}');
   }
 
+  @override
+  void didChangePlatformBrightness() {
+    _logger.logLifecycle('App', 'platformBrightness changed');
+  }
+
+  @override
+  void didChangeMetrics() {
+    _logger.logLifecycle('App', 'metrics changed (screen size, text scale, etc.)');
+  }
+
+  @override
+  void didChangeAccessibilityFeatures() {
+    _logger.logLifecycle('App', 'accessibility features changed');
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    _logger.logLifecycle('App', 'system locales changed', data: {
+      'locales': locales?.map((l) => l.languageCode).toList(),
+    });
+  }
+
   Future<void> _initApp() async {
     final sw = Stopwatch()..start();
     _logger.logAsyncStart('App', 'init');
 
     try {
-      _logger.debug('App', 'Stage 1/5: StorageService.init');
+      _logger.debug('App', 'Stage 1/6: StorageService.init');
       await StorageService().init();
-      _logger.debug('App', 'Stage 1/5: StorageService.init done');
+      _logger.debug('App', 'Stage 1/6: StorageService.init done');
 
       final lang = await StorageService().getLanguage();
       _locale = AppLanguage.fromCode(lang).locale;
       _logger.info('App', 'Language resolved: $lang → ${_locale.languageCode}');
 
-      _logger.debug('App', 'Stage 2/5: AudioService.init');
+      _logger.debug('App', 'Stage 2/6: AudioService.init');
       await AudioService().init();
-      _logger.debug('App', 'Stage 2/5: AudioService.init done');
+      _logger.debug('App', 'Stage 2/6: AudioService.init done');
 
-      _logger.debug('App', 'Stage 3/5: VocabularyService.init');
+      _logger.debug('App', 'Stage 3/6: VocabularyService.init');
       await VocabularyService().init();
-      _logger.debug('App', 'Stage 3/5: VocabularyService.init done');
+      _logger.debug('App', 'Stage 3/6: VocabularyService.init done');
 
-      _logger.debug('App', 'Stage 4/5: ExamService.init');
+      _logger.debug('App', 'Stage 4/6: ExamService.init');
       await ExamService().init();
-      _logger.debug('App', 'Stage 4/5: ExamService.init done');
+      _logger.debug('App', 'Stage 4/6: ExamService.init done');
 
-      _logger.debug('App', 'Stage 5/5: Onboarding check');
+      _logger.debug('App', 'Stage 5/6: Onboarding check');
       final onboarded = await StorageService().isOnboardingCompleted();
       _initialRoute = onboarded ? '/home' : '/onboarding';
       _logger.info('App', 'Onboarding completed: $onboarded → initial route: $_initialRoute');
+
+      _logger.debug('App', 'Stage 6/6: Load persisted progress');
+      if (_progressProvider != null) {
+        await _progressProvider!.loadFromStorage();
+        _logger.debug('App', 'Stage 6/6: Progress loaded from storage');
+      } else {
+        _logger.warn('App', 'Stage 6/6: Progress provider not yet created, skipping load');
+      }
 
       setState(() => _initialized = true);
       _logger.logAsyncDone('App', 'init', elapsed: sw.elapsed, data: {
@@ -130,7 +167,14 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
       providers: [
         ChangeNotifierProvider(create: (_) {
           _logger.logProvider('created', 'UserProgressProvider');
-          return UserProgressProvider();
+          final provider = UserProgressProvider();
+          _progressProvider = provider;
+          // If app already initialized, load progress now (catch-up for late init)
+          if (_initialized) {
+            _logger.logEdge('App', 'progress-provider-created-after-init — loading now');
+            provider.loadFromStorage();
+          }
+          return provider;
         }),
         Provider.value(value: AudioService()),
         Provider.value(value: VocabularyService()),

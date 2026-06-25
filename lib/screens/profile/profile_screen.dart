@@ -11,8 +11,14 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final _logger = AuditLogger();
     final t = Translations(Localizations.localeOf(context).languageCode);
     final progress = context.watch<UserProgressProvider>();
+
+    _logger.logScreenView('Profile', p: {
+      'streak': progress.currentStreak, 'words': progress.totalWordsLearned,
+      'minutes': progress.totalMinutesPracticed, 'loaded': progress.isLoaded,
+    });
 
     return Scaffold(
       appBar: AppBar(title: Text(t.get('profile'))),
@@ -24,7 +30,7 @@ class ProfileScreen extends StatelessWidget {
               gradient: const LinearGradient(colors: [AppColors.primary, AppColors.primaryLight])),
             child: const Icon(Icons.person, size: 50, color: Colors.white)),
           const SizedBox(height: 16),
-          Text('Learner', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+          Text(t.get('beginner'), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
           Text('${t.get('level')}: ${t.get('beginner')}',
             style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
@@ -38,9 +44,14 @@ class ProfileScreen extends StatelessWidget {
               ]),
             ]))),
           const SizedBox(height: 20),
-          _menuItem(Icons.language, t.get('language'),
-            () => Navigator.pushNamed(context, '/settings')),
-          _menuItem(Icons.info, t.get('about'), () {}),
+          _menuItem(Icons.language, t.get('language'), () {
+            _logger.logTap('Profile', 'LanguageMenuItem');
+            _logger.logNavigate('Profile', 'Settings', method: 'push');
+            Navigator.pushNamed(context, '/settings');
+          }),
+          _menuItem(Icons.info, t.get('about'), () {
+            _logger.logButton('Profile', 'About (stub)', data: {'note': 'not yet implemented'});
+          }),
         ])),
     );
   }

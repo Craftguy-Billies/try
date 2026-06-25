@@ -67,9 +67,11 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
 
       if (_index >= widget.words.length - 1) {
         _logger.logEdge('Flashcard', 'last-word-reached', data: {'index': _index, 'total': widget.words.length});
+        _logger.info('Flashcard', '🎉 All flashcards completed!', data: {'total': widget.words.length, 'completed': completedWord.id});
       }
     } else {
       _logger.logGuard('Flashcard', 'next-at-end', data: {'index': _index, 'total': widget.words.length});
+      _logger.info('Flashcard', '🎉 All flashcards already completed!', data: {'total': widget.words.length});
     }
   }
 

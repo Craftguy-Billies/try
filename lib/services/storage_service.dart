@@ -118,22 +118,50 @@ class StorageService {
   }
 
   Future<void> setDarkMode(bool v) async {
-    _logger.logToggle('Storage', 'darkMode', v);
+    _logger.logAsyncStart('Storage', 'setDarkMode', data: {'value': v});
     try {
       _prefs ??= await SharedPreferences.getInstance();
       await _prefs!.setBool('dark', v);
+      _logger.logAsyncDone('Storage', 'setDarkMode');
     } catch (e, stack) {
       _logger.logAsyncFail('Storage', 'setDarkMode', e, stack);
     }
   }
 
   Future<bool> getDarkMode() async {
+    _logger.logAsyncStart('Storage', 'getDarkMode');
     try {
       _prefs ??= await SharedPreferences.getInstance();
-      return _prefs!.getBool('dark') ?? false;
+      final result = _prefs!.getBool('dark') ?? false;
+      _logger.logAsyncDone('Storage', 'getDarkMode', data: {'result': result});
+      return result;
     } catch (e, stack) {
       _logger.logAsyncFail('Storage', 'getDarkMode', e, stack);
       return false;
+    }
+  }
+
+  Future<void> setNotificationsEnabled(bool v) async {
+    _logger.logAsyncStart('Storage', 'setNotificationsEnabled', data: {'value': v});
+    try {
+      _prefs ??= await SharedPreferences.getInstance();
+      await _prefs!.setBool('notif', v);
+      _logger.logAsyncDone('Storage', 'setNotificationsEnabled');
+    } catch (e, stack) {
+      _logger.logAsyncFail('Storage', 'setNotificationsEnabled', e, stack);
+    }
+  }
+
+  Future<bool> getNotificationsEnabled() async {
+    _logger.logAsyncStart('Storage', 'getNotificationsEnabled');
+    try {
+      _prefs ??= await SharedPreferences.getInstance();
+      final result = _prefs!.getBool('notif') ?? true;
+      _logger.logAsyncDone('Storage', 'getNotificationsEnabled', data: {'result': result});
+      return result;
+    } catch (e, stack) {
+      _logger.logAsyncFail('Storage', 'getNotificationsEnabled', e, stack);
+      return true;
     }
   }
 
