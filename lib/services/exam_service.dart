@@ -11,6 +11,9 @@ class ExamService {
   final _logger = AuditLogger();
   final _random = Random();
   List<ExamQuestion>? _all;
+  bool _initialized = false;
+
+  bool get isInitialized => _initialized;
 
   static const List<ExamConfig> configs = [
     ExamConfig(level: 'A1 - Beginner', questionCount: 20, timeMinutes: 15, passingScore: 60,
@@ -26,6 +29,7 @@ class ExamService {
   Future<void> init() async {
     _logger.logAsyncStart('Exam', 'init');
     _all = ExamData.allQuestions;
+    _initialized = true;
     _logger.logDataLoad('ExamData', _all!.length);
     _logger.logAsyncDone('Exam', 'init', data: {
       'questions': _all!.length, 'configs': configs.length,
@@ -33,6 +37,18 @@ class ExamService {
   }
 
   List<ExamQuestion> generateExam(ExamConfig config) {
+    if (!_initialized || _all == null) {
+      _logger.logEdge('Exam', 'generateExam-before-init', data: {
+        'initialized': _initialized, 'all_null': _all == null,
+      });
+      return [];
+    }
+    if (config.questionCount <= 0) {
+      _logger.logGuard('Exam', 'generateExam-zero-questionCount', data: {
+        'level': config.level, 'questionCount': config.questionCount,
+      });
+      return [];
+    }
     _logger.logAsyncStart('Exam', 'generateExam', data: {
       'level': config.level, 'target_count': config.questionCount,
       'categories': config.categories, 'time_min': config.timeMinutes,

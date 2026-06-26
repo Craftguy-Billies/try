@@ -22,8 +22,15 @@ class _GrammarLessonScreenState extends State<GrammarLessonScreen> {
     super.initState();
     _logger.logInit('GrammarLesson', data: {
       'lessonId': widget.lesson.id, 'exercises': widget.lesson.exercises.length,
+      'sections': widget.lesson.sections.length,
     });
     _logger.logScreenView('GrammarLesson(${widget.lesson.id})');
+    if (widget.lesson.sections.isEmpty) {
+      _logger.logEdge('GrammarLesson', 'empty-sections', data: {'lessonId': widget.lesson.id});
+    }
+    if (widget.lesson.exercises.isEmpty) {
+      _logger.logEdge('GrammarLesson', 'empty-exercises', data: {'lessonId': widget.lesson.id});
+    }
   }
 
   @override
@@ -75,6 +82,10 @@ class _GrammarLessonScreenState extends State<GrammarLessonScreen> {
               Card(child: Padding(padding: const EdgeInsets.all(20),
                 child: Text('All ${lesson.exercises.length} exercises completed!', textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.success))))
+            else if (lesson.exercises[_exerciseIdx].options.isEmpty)
+              Card(child: Padding(padding: const EdgeInsets.all(20),
+                child: Text('This exercise has no options', textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary))))
             else Card(child: Padding(padding: const EdgeInsets.all(20),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(isFr ? lesson.exercises[_exerciseIdx].questionFr : lesson.exercises[_exerciseIdx].questionEn,

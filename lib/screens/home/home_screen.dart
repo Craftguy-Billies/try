@@ -25,8 +25,15 @@ class HomeScreen extends StatelessWidget {
 
     _logger.logScreenView('Home', p: {
       'words': progress.totalWordsLearned, 'streak': progress.currentStreak,
-      'categories': vocab.categories.length,
+      'categories': vocab.categories.length, 'loaded': progress.isLoaded,
     });
+
+    if (!progress.isLoaded) {
+      _logger.logEdge('Home', 'progress-not-loaded-yet — showing stale/zero data');
+    }
+    if (vocab.categories.isEmpty) {
+      _logger.logEdge('Home', 'empty-categories — no vocabulary categories available');
+    }
 
     return PopScope(
       canPop: false,
@@ -46,21 +53,37 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 24),
           Text(t.get('categories'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
           const SizedBox(height: 14),
-          GridView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+          if (vocab.categories.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(child: Text(t.get('no_data'),
+                style: TextStyle(fontSize: 15, color: AppColors.textSecondary))))
+          else
+            GridView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2,
               childAspectRatio: 1.0, crossAxisSpacing: 12, mainAxisSpacing: 12),
             itemCount: vocab.categories.length,
             itemBuilder: (ctx, i) {
               final cat = vocab.categories[i];
-              final color = Color(int.parse('FF${cat.colorHex.substring(1)}', radix: 16));
               final catProgress = progress.getCategoryProgress(cat.id, cat.wordCount);
+              Color color;
+              try {
+                color = Color(int.parse('FF${cat.colorHex.substring(1)}', radix: 16));
+              } catch (_) {
+                _logger.logFallback('Home', 'color-parse-failed', 'primary color', data: {'hex': cat.colorHex});
+                color = AppColors.primary;
+              }
               return CategoryCard(categoryId: cat.id, nameKey: cat.nameKey, iconName: cat.icon,
                 color: color, wordCount: cat.wordCount, progress: catProgress,
                 onTap: () {
                   _logger.logTap('Home', 'CategoryCard(${cat.id})');
                   _logger.logNavigate('Home', 'VocabularyList(${cat.id})', method: 'push');
-                  Navigator.push(ctx, MaterialPageRoute(
-                    builder: (_) => VocabularyListScreen(categoryId: cat.id, categoryName: t.get(cat.nameKey))));
+                  try {
+                    Navigator.push(ctx, MaterialPageRoute(
+                      builder: (_) => VocabularyListScreen(categoryId: cat.id, categoryName: t.get(cat.nameKey))));
+                  } catch (e, stack) {
+                    _logger.logAsyncFail('Home', 'push-VocabularyList', e, stack, data: {'catId': cat.id});
+                  }
                 });
             }),
           const SizedBox(height: 24),
@@ -184,6 +207,13 @@ class UserProgressProvider extends ChangeNotifier {
   }
 
   void markWordComplete(String wordId, String categoryId) {
+    if (wordId.isEmpty) {
+      _logger.logGuard('Progress', 'markWordComplete-empty-wordId', data: {'categoryId': categoryId});
+      return;
+    }
+    if (categoryId.isEmpty) {
+      _logger.logGuard('Progress', 'markWordComplete-empty-categoryId', data: {'wordId': wordId});
+    }
     if (completedWords[wordId] == true) {
       _logger.logGuardSkip('Progress', 'word-already-complete', data: {'wordId': wordId});
       return;

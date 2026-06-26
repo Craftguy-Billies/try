@@ -19,6 +19,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _darkMode = false;
   bool _notificationsEnabled = true;
   bool _loaded = false;
+  bool _clearing = false;
 
   @override
   void initState() {
@@ -30,7 +31,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
-    _logger.logDispose('Settings', data: {'darkMode': _darkMode, 'notifications': _notificationsEnabled});
+    _logger.logDispose('Settings', data: {
+      'darkMode': _darkMode, 'notifications': _notificationsEnabled,
+      'clearing': _clearing,
+    });
     super.dispose();
   }
 
@@ -48,6 +52,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _logger.logAsyncDone('Settings', 'loadPreferences', data: {
           'darkMode': _darkMode, 'notifications': _notificationsEnabled,
         });
+      } else {
+        _logger.logEdge('Settings', 'not-mounted-after-loadPreferences');
       }
     } catch (e, stack) {
       _logger.logAsyncFail('Settings', 'loadPreferences', e, stack);
@@ -114,7 +120,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Icon(Icons.delete, color: AppColors.error)),
           title: const Text('Clear All Data', style: TextStyle(color: AppColors.error)),
           subtitle: const Text('Reset all progress and settings'),
-          onTap: () async {
+          onTap: _clearing ? null : () async {
             _logger.logTap('Settings', 'ClearAllData');
             _logger.logDialogShow('ClearDataConfirm', 'Settings');
             final confirmed = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
@@ -127,8 +133,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ));
             if (confirmed == true && context.mounted) {
+              _clearing = true;
               _logger.logUserAction('ClearAllData confirmed');
-              await context.read<UserProgressProvider>().resetAll();
+              try {
+                await context.read<UserProgressProvider>().resetAll();
+              } catch (e, stack) {
+                _logger.logAsyncFail('Settings', 'resetAll-failed', e, stack);
+              }
+              _clearing = false;
               if (context.mounted) {
                 setState(() { _darkMode = false; _notificationsEnabled = true; });
                 try {

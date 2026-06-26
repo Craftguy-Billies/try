@@ -31,6 +31,7 @@ class FrenchLearnApp extends StatefulWidget {
 class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObserver {
   Locale _locale = const Locale('en');
   bool _initialized = false;
+  bool _initInProgress = false;
   String _initialRoute = '/onboarding';
   final _logger = AuditLogger();
   UserProgressProvider? _progressProvider;
@@ -38,6 +39,10 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
   Locale get locale => _locale;
 
   void changeLanguage(String code) {
+    if (!_initialized) {
+      _logger.logGuard('App', 'changeLanguage-before-init', data: {'code': code});
+      return;
+    }
     if (_locale.languageCode == code) {
       _logger.logGuardSkip('App', 'same-language', data: {'code': code});
       return;
@@ -48,7 +53,12 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
     });
     _logger.logStateChange('App', 'locale', old, code);
     _logger.logUserAction('Language changed to: $code');
-    StorageService().setLanguage(code);
+    try {
+      StorageService().setLanguage(code);
+    } catch (e, stack) {
+      _logger.logAsyncFail('App', 'setLanguage-during-changeLanguage', e, stack,
+          data: {'code': code});
+    }
   }
 
   @override
@@ -62,7 +72,12 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
 
   @override
   void dispose() {
-    _logger.logDispose('FrenchLearnApp');
+    _logger.logDispose('FrenchLearnApp', data: {
+      'initialized': _initialized, 'initInProgress': _initInProgress,
+    });
+    if (_initInProgress) {
+      _logger.logEdge('App', 'dispose-during-init');
+    }
     WidgetsBinding.instance.removeObserver(this);
     _logger.debug('App', 'WidgetsBindingObserver removed');
     super.dispose();
@@ -71,6 +86,11 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _logger.logLifecycle('App', 'lifecycle=${state.name}');
+    if (state == AppLifecycleState.paused) {
+      _logger.debug('App', 'App moving to background — consider saving state');
+    } else if (state == AppLifecycleState.resumed) {
+      _logger.debug('App', 'App returning to foreground');
+    }
   }
 
   @override
@@ -96,6 +116,15 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
   }
 
   Future<void> _initApp() async {
+    if (_initInProgress) {
+      _logger.logGuard('App', 'init-already-in-progress');
+      return;
+    }
+    if (_initialized) {
+      _logger.logGuard('App', 'already-initialized');
+      return;
+    }
+    _initInProgress = true;
     final sw = Stopwatch()..start();
     _logger.logAsyncStart('App', 'init');
 
@@ -133,7 +162,15 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
         _logger.warn('App', 'Stage 6/6: Progress provider not yet created, skipping load');
       }
 
+      if (!mounted) {
+        _logger.logEdge('App', 'init-complete-but-not-mounted', data: {
+          'elapsed_ms': sw.elapsedMilliseconds,
+        });
+        _initInProgress = false;
+        return;
+      }
       setState(() => _initialized = true);
+      _initInProgress = false;
       _logger.logAsyncDone('App', 'init', elapsed: sw.elapsed, data: {
         'route': _initialRoute, 'locale': _locale.languageCode,
         'onboarded': onboarded,
@@ -141,7 +178,8 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
     } catch (e, stack) {
       _logger.logAsyncFail('App', 'init', e, stack, data: {'stage_elapsed_ms': sw.elapsedMilliseconds});
       _logger.logRecover('App', 'init failure — proceeding to home');
-      setState(() => _initialized = true);
+      _initInProgress = false;
+      if (mounted) setState(() => _initialized = true);
     }
   }
 
@@ -171,7 +209,6 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
           _logger.logProvider('created', 'UserProgressProvider');
           final provider = UserProgressProvider();
           _progressProvider = provider;
-          // If app already initialized, load progress now (catch-up for late init)
           if (_initialized) {
             _logger.logEdge('App', 'progress-provider-created-after-init — loading now');
             provider.loadFromStorage();
@@ -196,7 +233,11 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
         initialRoute: _initialRoute,
         onGenerateRoute: (settings) {
           Widget page;
-          switch (settings.name) {
+          final routeName = settings.name;
+          _logger.debug('Router', 'onGenerateRoute called', data: {
+            'name': routeName, 'arguments': '${settings.arguments}',
+          });
+          switch (routeName) {
             case '/onboarding': page = const OnboardingScreen(); break;
             case '/home': page = const HomeScreen(); break;
             case '/vocabulary': page = const VocabularyListScreen(); break;
@@ -205,11 +246,15 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
             case '/phrases': page = const PhrasesScreen(); break;
             case '/profile': page = const ProfileScreen(); break;
             case '/settings': page = const SettingsScreen(); break;
+            case null:
+              _logger.logEdge('Router', 'null-route-name — using /home as fallback');
+              page = const HomeScreen();
+              break;
             default:
-              _logger.logFallback('Router', 'Unknown route', '/home', data: {'requested': settings.name});
+              _logger.logFallback('Router', 'Unknown route', '/home', data: {'requested': routeName});
               page = const HomeScreen();
           }
-          _logger.logNavigate('init', settings.name ?? '/', data: {'widget': page.runtimeType.toString()});
+          _logger.logNavigate('init', routeName ?? '/', data: {'widget': page.runtimeType.toString()});
           return MaterialPageRoute(builder: (_) => page, settings: settings);
         },
       ),

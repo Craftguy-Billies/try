@@ -21,6 +21,7 @@ class _VocabularyListScreenState extends State<VocabularyListScreen> {
   final _logger = AuditLogger();
   String _searchQuery = '';
   int _difficultyFilter = 0; // 0 = all
+  int _prevTotalWords = 0;
 
   @override
   void initState() {
@@ -33,7 +34,10 @@ class _VocabularyListScreenState extends State<VocabularyListScreen> {
 
   @override
   void dispose() {
-    _logger.logDispose('VocabularyList', data: {'searchQuery': _searchQuery, 'filter': _difficultyFilter});
+    _logger.logDispose('VocabularyList', data: {
+      'searchQuery': _searchQuery, 'filter': _difficultyFilter,
+      'prevTotalWords': _prevTotalWords,
+    });
     super.dispose();
   }
 
@@ -42,6 +46,13 @@ class _VocabularyListScreenState extends State<VocabularyListScreen> {
     final t = Translations(Localizations.localeOf(context).languageCode);
     final vocab = context.watch<VocabularyService>();
     var words = widget.categoryId != null ? vocab.byCategory(widget.categoryId!) : vocab.allWords;
+
+    if (_prevTotalWords > 0 && words.isEmpty) {
+      _logger.logEdge('VocabularyList', 'words-became-empty-mid-view', data: {
+        'prevTotal': _prevTotalWords, 'search': _searchQuery, 'filter': _difficultyFilter,
+      });
+    }
+    _prevTotalWords = words.isNotEmpty ? words.length : _prevTotalWords;
 
     // Log empty category results before search/filter
     if (words.isEmpty) {
@@ -54,6 +65,13 @@ class _VocabularyListScreenState extends State<VocabularyListScreen> {
       w.french.toLowerCase().contains(_searchQuery.toLowerCase()) ||
       w.english.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
     if (_difficultyFilter > 0) words = words.where((w) => w.difficulty == _difficultyFilter).toList();
+
+    // Log when search + filter combine to yield empty results
+    if (words.isEmpty && (_searchQuery.isNotEmpty || _difficultyFilter > 0)) {
+      _logger.logEdge('VocabularyList', 'search-filter-combo-empty', data: {
+        'search': _searchQuery, 'filter': _difficultyFilter, 'category': widget.categoryId,
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.categoryName ?? t.get('vocabulary'))),
@@ -90,14 +108,19 @@ class _VocabularyListScreenState extends State<VocabularyListScreen> {
           }).toList())),
         if (words.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('${words.length} ${t.get('words_learned').split(' ').last.toLowerCase()}',
+            Text('${words.length} words',
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             TextButton.icon(icon: const Icon(Icons.stacked_bar_chart, size: 18),
               label: Text(t.get('flashcards')), onPressed: () {
                 _logger.logButton('VocabularyList', 'Flashcards', data: {'wordCount': words.length});
                 _logger.logNavigate('VocabularyList', 'FlashcardScreen', method: 'push');
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => FlashcardScreen(words: words)));
+                try {
+                  Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => FlashcardScreen(words: words)));
+                } catch (e, stack) {
+                  _logger.logAsyncFail('VocabularyList', 'push-FlashcardScreen', e, stack,
+                      data: {'wordCount': words.length});
+                }
               }),
           ])),
         Expanded(child: words.isEmpty
@@ -125,8 +148,13 @@ class _VocabularyListScreenState extends State<VocabularyListScreen> {
                 onTap: () {
                   _logger.logTap('VocabularyList', 'word:${word.id} (${word.french})');
                   _logger.logNavigate('VocabularyList', 'WordDetail(${word.id})', method: 'push');
-                  Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => WordDetailScreen(word: word)));
+                  try {
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => WordDetailScreen(word: word)));
+                  } catch (e, stack) {
+                    _logger.logAsyncFail('VocabularyList', 'push-WordDetail', e, stack,
+                        data: {'wordId': word.id});
+                  }
                 },
               ));
           })),

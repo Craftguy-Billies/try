@@ -64,7 +64,11 @@ class AppDrawer extends StatelessWidget {
         Navigator.pop(context);
         if (route != current) {
           _logger.logNavigate(current, route, method: 'drawer');
-          Navigator.pushReplacementNamed(context, route);
+          try {
+            Navigator.pushReplacementNamed(context, route);
+          } catch (e, stack) {
+            _logger.logAsyncFail('Drawer', 'pushReplacementNamed', e, stack, data: {'route': route});
+          }
         } else {
           _logger.logGuardSkip('Drawer', 'already-on-route', data: {'route': current});
         }

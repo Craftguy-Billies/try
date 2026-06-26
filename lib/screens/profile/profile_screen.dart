@@ -13,12 +13,25 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final _logger = AuditLogger();
     final t = Translations(Localizations.localeOf(context).languageCode);
-    final progress = context.watch<UserProgressProvider>();
+    UserProgressProvider progress;
+    try {
+      progress = context.watch<UserProgressProvider>();
+    } catch (e, stack) {
+      _logger.logAsyncFail('Profile', 'context.watch-UserProgressProvider', e, stack);
+      return Scaffold(
+        appBar: AppBar(title: Text(t.get('profile'))),
+        body: Center(child: Text(t.get('error_occurred'))),
+      );
+    }
 
     _logger.logScreenView('Profile', p: {
       'streak': progress.currentStreak, 'words': progress.totalWordsLearned,
       'minutes': progress.totalMinutesPracticed, 'loaded': progress.isLoaded,
     });
+
+    if (!progress.isLoaded) {
+      _logger.logEdge('Profile', 'progress-not-loaded', data: {'loaded': progress.isLoaded});
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text(t.get('profile'))),

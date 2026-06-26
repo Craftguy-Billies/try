@@ -17,6 +17,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
   final int _totalPages = 4;
   bool _isAnimating = false;
+  bool _completing = false; // guard against double-complete
+  int _rapidTapCount = 0;
 
   final List<_OnboardingPage> _pages = [
     _OnboardingPage(icon: Icons.school, color: AppColors.primary, titleKey: 'onboarding_title_1', descKey: 'onboarding_desc_1'),
@@ -34,20 +36,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   void dispose() {
-    _logger.logDispose('Onboarding', data: {'last_page': _currentPage});
+    _logger.logDispose('Onboarding', data: {
+      'last_page': _currentPage, 'completing': _completing,
+      'rapidTapCount': _rapidTapCount,
+    });
     _pageController.dispose();
     super.dispose();
   }
 
   void _onPageChanged(int i) {
+    if (i < 0 || i >= _totalPages) {
+      _logger.logEdge('Onboarding', 'page-index-out-of-bounds', data: {
+        'index': i, 'total': _totalPages,
+      });
+      return;
+    }
     final old = _currentPage;
     _isAnimating = false;
+    _rapidTapCount = 0;
     setState(() => _currentPage = i);
     _logger.logSwipe('Onboarding', from: old, to: i);
     _logger.logStateChangeInt('Onboarding', 'currentPage', old, i);
   }
 
   Future<void> _completeOnboarding(String reason) async {
+    if (_completing) {
+      _logger.logGuard('Onboarding', 'complete-already-in-progress', data: {'reason': reason});
+      return;
+    }
+    _completing = true;
     _logger.logEdge('Onboarding', 'User $reason onboarding');
     try {
       await StorageService().setOnboardingCompleted();
@@ -58,26 +75,57 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
     if (!mounted) {
       _logger.logEdge('Onboarding', 'not-mounted-after-onboarding-complete');
+      _completing = false;
       return;
     }
     _logger.logNavigate('Onboarding', '/home', method: 'pushReplacement');
-    Navigator.pushReplacementNamed(context, '/home');
+    try {
+      Navigator.pushReplacementNamed(context, '/home');
+    } catch (e, stack) {
+      _logger.logAsyncFail('Onboarding', 'pushReplacementNamed-/home', e, stack);
+      _logger.logRecover('Onboarding', 'navigation failed — widget may have been disposed');
+    }
   }
 
   void _handleSkip() {
+    if (_completing) {
+      _logger.logGuard('Onboarding', 'skip-during-complete');
+      return;
+    }
     _logger.logButton('Onboarding', 'Skip', data: {'from_page': _currentPage});
     _completeOnboarding('skipped');
   }
 
   void _handleNextOrStart() {
+    if (_completing) {
+      _logger.logGuard('Onboarding', 'next-during-complete');
+      return;
+    }
     if (_isAnimating) {
-      _logger.logGuard('Onboarding', 'double-tap-next', data: {'page': _currentPage});
+      _rapidTapCount++;
+      _logger.logGuard('Onboarding', 'rapid-tap-next-guarded', data: {
+        'page': _currentPage, 'rapidTapCount': _rapidTapCount,
+      });
+      if (_rapidTapCount > 5) {
+        _logger.warn('Onboarding', 'User rapidly tapping next repeatedly — possible UI frustration',
+            data: {'count': _rapidTapCount});
+      }
       return;
     }
     if (_currentPage < _totalPages - 1) {
       _logger.logButton('Onboarding', 'Next', data: {'page': _currentPage, 'to': _currentPage + 1});
       _isAnimating = true;
-      _pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+      try {
+        _pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+      } catch (e, stack) {
+        _logger.logAsyncFail('Onboarding', 'nextPage-controller-failed', e, stack,
+            data: {'fromPage': _currentPage});
+        _isAnimating = false;
+        // Manual fallback
+        if (mounted) {
+          setState(() { _currentPage++; _isAnimating = false; });
+        }
+      }
     } else {
       _logger.logButton('Onboarding', 'Get Started', data: {'from_page': _currentPage});
       _completeOnboarding('completed');

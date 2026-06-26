@@ -30,15 +30,26 @@ class LanguageSwitchScreen extends StatelessWidget {
               onTap: selected ? null : () {
                 _logger.logTap('LanguageSwitch', '${lang.code}');
                 _logger.logNavigate('LanguageSwitch', 'app.changeLanguage(${lang.code})', method: 'callback');
-                StorageService().setLanguage(lang.code);
+                try {
+                  StorageService().setLanguage(lang.code);
+                } catch (e, stack) {
+                  _logger.logAsyncFail('LanguageSwitch', 'setLanguage', e, stack,
+                      data: {'code': lang.code});
+                }
                 final appState = FrenchLearnApp.of(context);
                 if (appState == null) {
                   _logger.logEdge('LanguageSwitch', 'FrenchLearnApp.of(context) is null — cannot change language');
                   _logger.logRecover('LanguageSwitch', 'language change aborted — no ancestor state');
                   return;
                 }
-                appState.changeLanguage(lang.code);
-                Navigator.pop(context, true);
+                try {
+                  appState.changeLanguage(lang.code);
+                  Navigator.pop(context, true);
+                } catch (e, stack) {
+                  _logger.logAsyncFail('LanguageSwitch', 'changeLanguage-or-pop', e, stack,
+                      data: {'code': lang.code});
+                  if (context.mounted) Navigator.pop(context, true);
+                }
               },
             ));
         }),

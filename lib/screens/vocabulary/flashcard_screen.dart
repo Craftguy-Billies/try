@@ -75,13 +75,22 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
       _logger.logGuard('Flashcard', 'next-while-flipping');
       return;
     }
+    if (_index >= widget.words.length) {
+      _logger.logEdge('Flashcard', 'index-oob-in-next', data: {'index': _index, 'total': widget.words.length});
+      return;
+    }
     if (_index < widget.words.length - 1) {
       final oldIdx = _index;
       final completedWord = widget.words[_index];
       setState(() { _index++; _showBack = false; _flipCtrl.reset(); });
       _logger.logStateChangeInt('Flashcard', 'index', oldIdx, _index);
-      final progress = context.read<UserProgressProvider>();
-      progress.markWordComplete(completedWord.id, completedWord.category);
+      try {
+        final progress = context.read<UserProgressProvider>();
+        progress.markWordComplete(completedWord.id, completedWord.category);
+      } catch (e, stack) {
+        _logger.logAsyncFail('Flashcard', 'markWordComplete-in-next', e, stack,
+            data: {'wordId': completedWord.id});
+      }
       _logger.logButton('Flashcard', 'Next', data: {'completed': completedWord.id, 'newIdx': _index});
 
       if (_index >= widget.words.length - 1) {
@@ -174,7 +183,12 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
             IconButton.filled(onPressed: _index > 0 ? _prev : null, icon: const Icon(Icons.arrow_back)),
             IconButton.filled(onPressed: () {
               _logger.logButton('Flashcard', 'Audio:${word.french}');
-              context.read<AudioService>().speak(word.french);
+              try {
+                context.read<AudioService>().speak(word.french);
+              } catch (e, stack) {
+                _logger.logAsyncFail('Flashcard', 'audio-speak', e, stack,
+                    data: {'word': word.french});
+              }
             }, icon: const Icon(Icons.volume_up), style: IconButton.styleFrom(backgroundColor: AppColors.accent)),
             IconButton.filled(onPressed: _index < widget.words.length - 1 ? _next : null, icon: const Icon(Icons.arrow_forward)),
           ])),

@@ -10,6 +10,7 @@ class AudioService {
   FlutterTts? _tts;
   bool _initialized = false;
   bool _isSpeaking = false;
+  bool _disposed = false;
 
   bool get isSpeaking => _isSpeaking;
   bool get isInitialized => _initialized;
@@ -17,12 +18,16 @@ class AudioService {
   Future<void> init() async {
     _logger.logAsyncStart('Audio', 'init');
     try {
+      if (_disposed) {
+        _logger.logEdge('Audio', 'init-after-dispose — creating new TTS instance');
+      }
       _tts = FlutterTts();
       await _tts!.setLanguage('fr-FR');
       await _tts!.setSpeechRate(0.45);
       await _tts!.setPitch(1.0);
       await _tts!.setVolume(1.0);
       _initialized = true;
+      _disposed = false;
       _tts!.setStartHandler(() {
         _isSpeaking = true;
         _logger.logAudio('TTS-start', text: 'speaking');
@@ -56,6 +61,11 @@ class AudioService {
   Future<void> speak(String text) async {
     _logger.logAsyncStart('Audio', 'speak', data: {'text_len': text.length, 'text_preview': text.length > 30 ? '${text.substring(0, 30)}…' : text});
 
+    if (_disposed) {
+      _logger.logGuard('Audio', 'speak-after-dispose', data: {'text_len': text.length});
+      return;
+    }
+
     if (!_initialized || _tts == null) {
       _logger.logGuard('Audio', 'not-initialized', data: {'initialized': _initialized, 'tts_null': _tts == null});
       return;
@@ -68,13 +78,13 @@ class AudioService {
 
     try {
       if (_isSpeaking) {
-        _logger.logEdge('Audio', 'interrupting-current-speech');
+        _logger.logEdge('Audio', 'interrupting-current-speech', data: {'text_len': text.length});
         await stop();
       }
       await _tts!.speak(text);
       _logger.logAsyncDone('Audio', 'speak');
     } catch (e, stack) {
-      _logger.logAsyncFail('Audio', 'speak', e, stack);
+      _logger.logAsyncFail('Audio', 'speak', e, stack, data: {'text_len': text.length});
     }
   }
 
@@ -90,10 +100,13 @@ class AudioService {
   }
 
   void dispose() {
-    _logger.logDispose('AudioService');
+    _logger.logDispose('AudioService', data: {
+      'wasSpeaking': _isSpeaking, 'wasInitialized': _initialized,
+    });
     _tts?.stop();
     _tts = null;
     _initialized = false;
     _isSpeaking = false;
+    _disposed = true;
   }
 }

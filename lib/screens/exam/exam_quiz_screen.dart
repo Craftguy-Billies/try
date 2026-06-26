@@ -39,39 +39,61 @@ class _ExamQuizScreenState extends State<ExamQuizScreen> {
     _questions = ExamService().generateExam(widget.config);
     _secondsLeft = widget.config.timeMinutes * 60;
 
+    if (_questions.isEmpty) {
+      _logger.logEdge('ExamQuiz', 'generateExam-returned-empty', data: {
+        'level': widget.config.level, 'configCount': widget.config.questionCount,
+      });
+      _secondsLeft = 0;
+    }
+
     if (_secondsLeft <= 0) {
       _logger.logEdge('ExamQuiz', 'zero-or-negative-time', data: {'seconds': _secondsLeft, 'timeMin': widget.config.timeMinutes});
-      _logger.logRecover('ExamQuiz', 'zero time — auto-submitting');
-      _submit(reason: 'zero_time');
+      _logger.logRecover('ExamQuiz', 'zero time or empty questions — auto-submitting');
+      _submit(reason: _questions.isEmpty ? 'empty_questions' : 'zero_time');
       return;
     }
 
     _logger.logTimerStart('ExamQuiz', seconds: _secondsLeft);
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) {
-        _logger.logEdge('ExamQuiz', 'timer-tick-after-dispose', data: {'tickCount': _tickCount});
-        return;
-      }
-      _tickCount++;
-      setState(() {
-        _secondsLeft--;
-        if (_secondsLeft <= 0) {
-          _logger.logTimerExpire('ExamQuiz', data: {'tickCount': _tickCount});
-          _submit(reason: 'timeout');
+    try {
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) {
+          _logger.logEdge('ExamQuiz', 'timer-tick-after-dispose', data: {'tickCount': _tickCount});
+          return;
+        }
+        if (_submitted) {
+          _logger.logEdge('ExamQuiz', 'timer-tick-after-submit', data: {'tickCount': _tickCount});
+          _timer?.cancel();
+          return;
+        }
+        _tickCount++;
+        setState(() {
+          _secondsLeft--;
+          if (_secondsLeft <= 0) {
+            _logger.logTimerExpire('ExamQuiz', data: {'tickCount': _tickCount});
+            _submit(reason: 'timeout');
+          }
+        });
+        if (_secondsLeft > 0 && _secondsLeft % 30 == 0) {
+          _logger.logTimerTick('ExamQuiz', _secondsLeft);
         }
       });
-      if (_secondsLeft > 0 && _secondsLeft % 30 == 0) {
-        _logger.logTimerTick('ExamQuiz', _secondsLeft);
-      }
-    });
+    } catch (e, stack) {
+      _logger.logAsyncFail('ExamQuiz', 'timer-start-failed', e, stack);
+      _logger.logRecover('ExamQuiz', 'timer failed to start — exam will not auto-submit');
+    }
   }
 
   @override
   void dispose() {
     _logger.logDispose('ExamQuiz', data: {
       'submitted': _submitted, 'currentQ': _current, 'secondsLeft': _secondsLeft,
+      'tickCount': _tickCount,
     });
-    if (!_submitted) _logger.logEdge('ExamQuiz', 'disposed-without-submit');
+    if (!_submitted) {
+      _logger.logEdge('ExamQuiz', 'disposed-without-submit', data: {
+        'secondsLeft': _secondsLeft, 'tickCount': _tickCount,
+      });
+    }
     _timer?.cancel();
     super.dispose();
   }
@@ -82,7 +104,7 @@ class _ExamQuizScreenState extends State<ExamQuizScreen> {
       return;
     }
     _submitted = true;
-    _logger.logTimerCancel('ExamQuiz');
+    _logger.logTimerCancel('ExamQuiz', data: {'reason': reason});
     _timer?.cancel();
 
     int correct = 0;
@@ -102,23 +124,42 @@ class _ExamQuizScreenState extends State<ExamQuizScreen> {
       _logger.logEdge('ExamQuiz', 'submit-after-dispose — cannot navigate to result');
       return;
     }
-    final progress = context.read<UserProgressProvider>();
-    progress.addPracticeTime(widget.config.timeMinutes);
+    try {
+      final progress = context.read<UserProgressProvider>();
+      progress.addPracticeTime(widget.config.timeMinutes);
+    } catch (e, stack) {
+      _logger.logAsyncFail('ExamQuiz', 'addPracticeTime-in-submit', e, stack);
+    }
 
     if (!mounted) {
       _logger.logEdge('ExamQuiz', 'submit-context-invalidated — cannot navigate to result');
       return;
     }
-    Navigator.pushReplacement(context, MaterialPageRoute(
-      builder: (_) => ExamResultScreen(score: score, total: _questions.length,
-        correct: correct, config: widget.config, questions: _questions, answers: _answers)));
+    try {
+      Navigator.pushReplacement(context, MaterialPageRoute(
+        builder: (_) => ExamResultScreen(score: score, total: _questions.length,
+          correct: correct, config: widget.config, questions: _questions, answers: _answers)));
+    } catch (e, stack) {
+      _logger.logAsyncFail('ExamQuiz', 'pushReplacement-to-result', e, stack);
+      // Fallback: navigate to home
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+      }
+    }
   }
 
   void _showQuitDialog() {
+    if (_submitted) {
+      _logger.logGuard('ExamQuiz', 'quit-dialog-after-submit');
+      return;
+    }
     _logger.logDialogShow('QuitConfirm', 'ExamQuiz', data: {
       'currentQ': _current, 'answered': _answers.length, 'total': _questions.length,
     });
-    showDialog(context: context, builder: (ctx) => AlertDialog(
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
       title: Text(Translations(Localizations.localeOf(ctx).languageCode).get('cancel')),
       content: const Text('Are you sure you want to quit? Your progress will be lost.'),
       actions: [
@@ -136,15 +177,27 @@ class _ExamQuizScreenState extends State<ExamQuizScreen> {
           Navigator.pop(ctx);
           _timer?.cancel();
           _logger.logTimerCancel('ExamQuiz');
-          Navigator.pop(context);
+          if (context.mounted) {
+            Navigator.pop(context);
+          }
         },
           child: const Text('Quit', style: TextStyle(color: AppColors.error))),
-      ]));
+      ]),
+    ).then((_) {
+      // If dialog dismissed without explicit button (back button on dialog)
+      if (!_submitted) {
+        _logger.logDialogResult('QuitConfirm', 'dismissed-via-back-or-tap-outside');
+      }
+    });
   }
 
   void _selectAnswer(String opt) {
     if (_submitted) {
       _logger.logGuard('ExamQuiz', 'answer-after-submit', data: {'question': _current, 'selected': opt});
+      return;
+    }
+    if (_current < 0 || _current >= _questions.length) {
+      _logger.logEdge('ExamQuiz', 'answer-index-oob', data: {'current': _current, 'total': _questions.length});
       return;
     }
     final prev = _answers[_current];

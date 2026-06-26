@@ -18,13 +18,24 @@ class PhrasesScreen extends StatelessWidget {
     final t = Translations(Localizations.localeOf(context).languageCode);
     _logger.logScreenView('Phrases');
 
+    if (PhraseData.conversations.isEmpty) {
+      _logger.logEdge('Phrases', 'empty-conversations-list');
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(t.get('phrases'))),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         const SizedBox(height: 8),
         Text('Conversations', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
         const SizedBox(height: 12),
-        ...PhraseData.conversations.map((conv) => Card(margin: const EdgeInsets.only(bottom: 10),
+        if (PhraseData.conversations.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(child: Text('No conversations available',
+              style: TextStyle(color: AppColors.textSecondary))),
+          )
+        else
+          ...PhraseData.conversations.map((conv) => Card(margin: const EdgeInsets.only(bottom: 10),
           child: ListTile(
             contentPadding: const EdgeInsets.all(14),
             leading: Container(width: 44, height: 44, alignment: Alignment.center,
@@ -38,8 +49,13 @@ class PhrasesScreen extends StatelessWidget {
             onTap: () {
               _logger.logTap('Phrases', 'conversation:${conv.id}');
               _logger.logNavigate('Phrases', 'Conversation(${conv.id})', method: 'push');
-              Navigator.push(context, MaterialPageRoute(
-                builder: (_) => ConversationScreen(conversation: conv)));
+              try {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => ConversationScreen(conversation: conv)));
+              } catch (e, stack) {
+                _logger.logAsyncFail('Phrases', 'push-ConversationScreen', e, stack,
+                    data: {'convId': conv.id});
+              }
             },
           ))),
         const SizedBox(height: 20),
@@ -81,7 +97,12 @@ class PhrasesScreen extends StatelessWidget {
             trailing: IconButton(icon: const Icon(Icons.volume_up, size: 20),
               onPressed: () {
                 _logger.logButton('Phrases', 'Audio:$title', data: {'text': p.french});
-                context.read<AudioService>().speak(p.french);
+                try {
+                  context.read<AudioService>().speak(p.french);
+                } catch (e, stack) {
+                  _logger.logAsyncFail('Phrases', 'audio-speak', e, stack,
+                      data: {'section': title, 'text': p.french});
+                }
               }),
           ))),
       const SizedBox(height: 16),

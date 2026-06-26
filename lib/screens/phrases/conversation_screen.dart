@@ -84,7 +84,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   IconButton(icon: const Icon(Icons.volume_up, size: 20),
                     onPressed: () {
                       _logger.logButton('Conversation', 'Audio:line$i', data: {'speaker': line.speaker});
-                      context.read<AudioService>().speak(line.french);
+                      try {
+                        context.read<AudioService>().speak(line.french);
+                      } catch (e, stack) {
+                        _logger.logAsyncFail('Conversation', 'audio-speak', e, stack,
+                            data: {'lineIdx': i, 'speaker': line.speaker});
+                      }
                     }),
                 ]),
               ]));
