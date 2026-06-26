@@ -54,8 +54,15 @@
 ## 2026-06-26T13:19 — yes
 
 ## 2026-06-26T13:30 — i mean u have both url for me to test in phone? i wanna see if the app works wel…
+
+## 2026-06-26T13:30 — i mean u have both url for me to test in phone? i wanna see if the app works wel…
 **Request:** i mean u have both url for me to test in phone? i wanna see if the app works well after ur debug and all implementations
 **Status:** [OK] Success
 **What was done:** Both Flutter web apps are built and running! Here are the two URLs you can open on your phone to test: | App | URL | |-----|-----| | French Learn (main app) | https://work-1-hylekcrjzzficeue.prod-runtime.all-hands.dev/ | | French App (french_app) | https://work-2-hylekcrjzzficeue.prod-runtime.all-hands.dev/ | Both are serving the fully built release versions of the Flutter apps. Open those links on your phone and you'll be able to test everything.
+
+## 2026-06-26T13:32 — both are flutter and can be built as apk right? but what is the difference betwe…
+**Request:** both are flutter and can be built as apk right? but what is the difference between the two
+**Status:** [OK] Success
+**What was done:** Here's a clear breakdown of both Flutter projects in this repo: Two Flutter Projects | | (root) | ( ) | |---|---|---| | Version | 2.0.0+1 | 1.0.0+1 | | SDK | | | | Key deps | , | , , , | Feature Comparison | Feature | (root) | | |---|---|---| | Vocabulary | ✅ List, flashcards, word detail | ✅ List, flashcards | | Grammar lessons | ✅ Full grammar section | ❌ | | Phrases /…
 
 ## VibeCoder — Task Log
