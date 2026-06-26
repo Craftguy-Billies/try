@@ -37,7 +37,7 @@ class ProgressCard extends StatelessWidget {
           const SizedBox(height: 16),
           ClipRRect(borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: dailyGoal > 0 ? (wordsLearned % (dailyGoal + 1)) / dailyGoal : 0.0,
+              value: dailyGoal > 0 ? (wordsLearned / dailyGoal).clamp(0.0, 1.0) : 0.0,
               backgroundColor: Colors.white.withAlpha(60),
               color: AppColors.accent, minHeight: 8)),
         ]),
