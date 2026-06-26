@@ -8,8 +8,8 @@
 "use strict";
 
 // This loads the flutter engine JavaScript and the service worker.
-// The `{{flutter_js}}` and `{{flutter_build_config}}` are replaced
-// by `flutter build web` with the actual file contents.
+// The flutter_js and flutter_build_config placeholders are replaced
+// by flutter build web with the actual file contents.
 {{flutter_js}}
 {{flutter_build_config}}
 
