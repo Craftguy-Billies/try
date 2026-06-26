@@ -126,8 +126,8 @@ class UserProgress {
           (json['favoriteWordIds'] as List<dynamic>?)?.cast<String>() ?? [],
       lastReviewedMap: rawReviewed != null
           ? rawReviewed.map((k, v) => MapEntry(
-                k as String,
-                DateTime.parse(v as String),
+                k,
+                DateTime.parse(v),
               ))
           : {},
     );

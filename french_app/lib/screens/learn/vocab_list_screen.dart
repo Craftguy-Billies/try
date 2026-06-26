@@ -58,7 +58,6 @@ class _VocabListScreenState extends State<VocabListScreen> {
       case FilterMode.all:
         return words;
     }
-    return [];
   }
 
   List<VocabItem> _searchWords(List<VocabItem> words) {

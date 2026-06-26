@@ -4,8 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:french_app/debug/debug_logger.dart';
 import 'package:french_app/i18n/app_localizations.dart';
 import 'package:french_app/providers/progress_provider.dart';
-import 'package:french_app/providers/locale_provider.dart';
-import 'package:french_app/providers/theme_provider.dart';
 import 'package:french_app/data/french_vocab.dart';
 
 class ProfileScreen extends StatefulWidget {
