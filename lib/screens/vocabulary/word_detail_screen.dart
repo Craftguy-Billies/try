@@ -38,7 +38,17 @@ class WordDetailScreen extends StatelessWidget {
             const SizedBox(width: 12),
             IconButton.filled(onPressed: () {
               _logger.logButton('WordDetail', 'Audio:${word.french}');
-              context.read<AudioService>().speak(word.french);
+              try {
+                final audio = context.read<AudioService>();
+                if (!audio.isInitialized) {
+                  _logger.logGuard('WordDetail', 'audio-not-initialized', data: {'word': word.id});
+                  return;
+                }
+                audio.speak(word.french);
+              } catch (e, stack) {
+                _logger.logAsyncFail('WordDetail', 'audio-speak', e, stack,
+                    data: {'word': word.french});
+              }
             },
               icon: const Icon(Icons.volume_up), style: IconButton.styleFrom(backgroundColor: AppColors.accent)),
           ]),

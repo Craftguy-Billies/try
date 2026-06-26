@@ -5,6 +5,7 @@ import '../../services/audit_logger.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
 import '../../services/storage_service.dart';
+import '../../app.dart';
 import '../home/home_screen.dart';
 import 'language_switch_screen.dart';
 
@@ -98,7 +99,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onChanged: _loaded ? (v) {
             _logger.logToggle('Settings', 'darkMode', v, data: {'was': _darkMode});
             setState(() => _darkMode = v);
-            StorageService().setDarkMode(v);
+            StorageService().setDarkMode(v).catchError((e, stack) {
+              _logger.logAsyncFail('Settings', 'setDarkMode-persist', e, stack);
+            });
+            // Notify app to rebuild with new theme
+            final appState = FrenchLearnApp.of(context);
+            if (appState != null) {
+              _logger.logEdge('Settings', 'dark mode toggle — app rebuild needed');
+              appState.setState(() {});
+            }
           } : null)),
         Card(child: SwitchListTile(
           secondary: Container(width: 40, height: 40, alignment: Alignment.center,
@@ -109,7 +118,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onChanged: _loaded ? (v) {
             _logger.logToggle('Settings', 'notifications', v, data: {'was': _notificationsEnabled});
             setState(() => _notificationsEnabled = v);
-            StorageService().setNotificationsEnabled(v);
+            StorageService().setNotificationsEnabled(v).catchError((e, stack) {
+              _logger.logAsyncFail('Settings', 'setNotificationsEnabled-persist', e, stack);
+            });
           } : null)),
         const SizedBox(height: 24),
         Text('Data', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),

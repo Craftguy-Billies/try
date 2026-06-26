@@ -32,9 +32,10 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
   Locale _locale = const Locale('en');
   bool _initialized = false;
   bool _initInProgress = false;
+  bool _darkMode = false;
   String _initialRoute = '/onboarding';
   final _logger = AuditLogger();
-  UserProgressProvider? _progressProvider;
+  late final UserProgressProvider _progressProvider;
 
   Locale get locale => _locale;
 
@@ -67,6 +68,8 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
     _logger.logInit('FrenchLearnApp');
     WidgetsBinding.instance.addObserver(this);
     _logger.debug('App', 'WidgetsBindingObserver added');
+    _progressProvider = UserProgressProvider();
+    _logger.logProvider('created', 'UserProgressProvider (in initState, pre-init)');
     _initApp();
   }
 
@@ -86,26 +89,52 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _logger.logLifecycle('App', 'lifecycle=${state.name}');
-    if (state == AppLifecycleState.paused) {
-      _logger.debug('App', 'App moving to background — consider saving state');
-    } else if (state == AppLifecycleState.resumed) {
-      _logger.debug('App', 'App returning to foreground');
+    switch (state) {
+      case AppLifecycleState.paused:
+        _logger.debug('App', 'App moving to background — consider saving state');
+        break;
+      case AppLifecycleState.resumed:
+        _logger.debug('App', 'App returning to foreground');
+        break;
+      case AppLifecycleState.inactive:
+        _logger.debug('App', 'App becoming inactive (e.g., phone call, split-screen)');
+        break;
+      case AppLifecycleState.detached:
+        _logger.debug('App', 'App detached from view tree');
+        break;
+      case AppLifecycleState.hidden:
+        _logger.debug('App', 'App hidden — not visible to user');
+        break;
     }
   }
 
   @override
   void didChangePlatformBrightness() {
-    _logger.logLifecycle('App', 'platformBrightness changed');
+    _logger.logLifecycle('App', 'platformBrightness changed', data: {
+      'platformBrightness': MediaQuery.platformBrightnessOf(context).name,
+      'usingUserDarkMode': _darkMode,
+    });
   }
 
   @override
   void didChangeMetrics() {
-    _logger.logLifecycle('App', 'metrics changed (screen size, text scale, etc.)');
+    _logger.logLifecycle('App', 'metrics changed', data: {
+      'size': '${MediaQuery.sizeOf(context)}',
+      'padding': '${MediaQuery.paddingOf(context)}',
+      'textScale': MediaQuery.textScaleFactorOf(context),
+      'devicePixelRatio': MediaQuery.devicePixelRatioOf(context),
+    });
   }
 
   @override
   void didChangeAccessibilityFeatures() {
-    _logger.logLifecycle('App', 'accessibility features changed');
+    _logger.logLifecycle('App', 'accessibility features changed', data: {
+      'accessibleNavigation': MediaQuery.accessibleNavigationOf(context),
+      'invertColors': MediaQuery.invertColorsOf(context),
+      'disableAnimations': MediaQuery.disableAnimationsOf(context),
+      'boldText': MediaQuery.boldTextOf(context),
+      'highContrast': MediaQuery.highContrastOf(context),
+    });
   }
 
   @override
@@ -113,6 +142,14 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
     _logger.logLifecycle('App', 'system locales changed', data: {
       'locales': locales?.map((l) => l.languageCode).toList(),
     });
+  }
+
+  @override
+  void didChangeTextScaleFactor() {
+    _logger.logLifecycle('App', 'textScaleFactor changed', data: {
+      'textScale': MediaQuery.textScaleFactorOf(context),
+    });
+    setState(() {}); // Force rebuild with new text scale
   }
 
   Future<void> _initApp() async {
@@ -129,37 +166,42 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
     _logger.logAsyncStart('App', 'init');
 
     try {
-      _logger.debug('App', 'Stage 1/6: StorageService.init');
+      _logger.debug('App', 'Stage 1/7: StorageService.init');
       await StorageService().init();
-      _logger.debug('App', 'Stage 1/6: StorageService.init done');
+      _logger.debug('App', 'Stage 1/7: StorageService.init done');
 
       final lang = await StorageService().getLanguage();
       _locale = AppLanguage.fromCode(lang).locale;
       _logger.info('App', 'Language resolved: $lang → ${_locale.languageCode}');
 
-      _logger.debug('App', 'Stage 2/6: AudioService.init');
+      _logger.debug('App', 'Stage 2/7: AudioService.init');
       await AudioService().init();
-      _logger.debug('App', 'Stage 2/6: AudioService.init done');
+      _logger.debug('App', 'Stage 2/7: AudioService.init done');
 
-      _logger.debug('App', 'Stage 3/6: VocabularyService.init');
+      _logger.debug('App', 'Stage 3/7: VocabularyService.init');
       await VocabularyService().init();
-      _logger.debug('App', 'Stage 3/6: VocabularyService.init done');
+      _logger.debug('App', 'Stage 3/7: VocabularyService.init done');
 
-      _logger.debug('App', 'Stage 4/6: ExamService.init');
+      _logger.debug('App', 'Stage 4/7: ExamService.init');
       await ExamService().init();
-      _logger.debug('App', 'Stage 4/6: ExamService.init done');
+      _logger.debug('App', 'Stage 4/7: ExamService.init done');
 
-      _logger.debug('App', 'Stage 5/6: Onboarding check');
+      _logger.debug('App', 'Stage 5/7: Onboarding check');
       final onboarded = await StorageService().isOnboardingCompleted();
       _initialRoute = onboarded ? '/home' : '/onboarding';
       _logger.info('App', 'Onboarding completed: $onboarded → initial route: $_initialRoute');
 
-      _logger.debug('App', 'Stage 6/6: Load persisted progress');
-      if (_progressProvider != null) {
-        await _progressProvider!.loadFromStorage();
-        _logger.debug('App', 'Stage 6/6: Progress loaded from storage');
-      } else {
-        _logger.warn('App', 'Stage 6/6: Progress provider not yet created, skipping load');
+      _logger.debug('App', 'Stage 6/7: Load persisted progress');
+      await _progressProvider.loadFromStorage();
+      _logger.debug('App', 'Stage 6/7: Progress loaded from storage');
+
+      _logger.debug('App', 'Stage 7/7: Load preferences (dark mode, etc.)');
+      try {
+        _darkMode = await StorageService().getDarkMode();
+        _logger.info('App', 'Dark mode loaded: $_darkMode');
+      } catch (e, stack) {
+        _logger.logAsyncFail('App', 'load-darkMode-preference', e, stack);
+        _darkMode = false;
       }
 
       if (!mounted) {
@@ -205,16 +247,7 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
     _logger.logProvider('creating', 'MultiProvider with 5 services');
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) {
-          _logger.logProvider('created', 'UserProgressProvider');
-          final provider = UserProgressProvider();
-          _progressProvider = provider;
-          if (_initialized) {
-            _logger.logEdge('App', 'progress-provider-created-after-init — loading now');
-            provider.loadFromStorage();
-          }
-          return provider;
-        }),
+        ChangeNotifierProvider.value(value: _progressProvider),
         Provider.value(value: AudioService()),
         Provider.value(value: VocabularyService()),
         Provider.value(value: ExamService()),
@@ -224,6 +257,8 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
         title: 'Learn French',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: _darkMode ? ThemeMode.dark : ThemeMode.light,
         locale: _locale,
         localizationsDelegates: const [
           DefaultMaterialLocalizations.delegate,

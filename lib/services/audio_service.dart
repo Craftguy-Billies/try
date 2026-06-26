@@ -84,7 +84,9 @@ class AudioService {
       await _tts!.speak(text);
       _logger.logAsyncDone('Audio', 'speak');
     } catch (e, stack) {
+      _isSpeaking = false; // Reset on failure — otherwise stuck speaking forever
       _logger.logAsyncFail('Audio', 'speak', e, stack, data: {'text_len': text.length});
+      _logger.logRecover('Audio', 'speak failed — isSpeaking reset to false');
     }
   }
 

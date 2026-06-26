@@ -146,12 +146,17 @@ class UserProgressProvider extends ChangeNotifier {
   int dailyGoalWords = 20;
   DateTime? _lastPracticeDate;
   bool _loaded = false;
+  bool _savePending = false;
   final Map<String, int> categoryProgress = {};
   final Map<String, bool> completedWords = {};
 
   bool get isLoaded => _loaded;
 
   Future<void> loadFromStorage() async {
+    if (_loaded) {
+      _logger.logGuard('Progress', 'loadFromStorage-already-loaded');
+      return;
+    }
     _logger.logAsyncStart('Progress', 'loadFromStorage');
     try {
       final stored = await StorageService().loadProgress();
@@ -202,17 +207,26 @@ class UserProgressProvider extends ChangeNotifier {
   }
 
   double getCategoryProgress(String catId, int total) {
+    if (total <= 0) {
+      _logger.logZero('Progress', 'getCategoryProgress-total', data: {'catId': catId, 'total': total});
+      return 0.0;
+    }
     final done = categoryProgress[catId] ?? 0;
-    return total > 0 ? done / total : 0.0;
+    if (done > total) {
+      _logger.logOverflow('Progress', 'categoryProgress', value: done, max: total,
+          data: {'catId': catId});
+      return 1.0;
+    }
+    return done / total;
   }
 
   void markWordComplete(String wordId, String categoryId) {
     if (wordId.isEmpty) {
-      _logger.logGuard('Progress', 'markWordComplete-empty-wordId', data: {'categoryId': categoryId});
+      _logger.logValidation('Progress', 'wordId', 'empty-id');
       return;
     }
     if (categoryId.isEmpty) {
-      _logger.logGuard('Progress', 'markWordComplete-empty-categoryId', data: {'wordId': wordId});
+      _logger.logValidation('Progress', 'categoryId', 'empty-category', data: {'wordId': wordId});
     }
     if (completedWords[wordId] == true) {
       _logger.logGuardSkip('Progress', 'word-already-complete', data: {'wordId': wordId});
@@ -226,11 +240,25 @@ class UserProgressProvider extends ChangeNotifier {
     totalMinutesPracticed++;
     _updateStreak();
     notifyListeners();
-    _saveToStorage();
+    _scheduleSave();
     _logger.logStateChangeInt('Progress', 'totalWordsLearned', oldWords, totalWordsLearned);
     _logger.logStateChangeInt('Progress', 'currentStreak', oldStreak, currentStreak);
     _logger.debug('Progress', 'markWordComplete', data: {
       'wordId': wordId, 'categoryId': categoryId, 'catProgress': categoryProgress[categoryId],
+    });
+  }
+
+  void _scheduleSave() {
+    if (_savePending) {
+      _logger.logDebounce('Progress', 'scheduleSave — already pending');
+      return;
+    }
+    _savePending = true;
+    _saveToStorage().then((_) {
+      _savePending = false;
+    }).catchError((e, stack) {
+      _savePending = false;
+      _logger.logAsyncFail('Progress', 'scheduleSave-error', e, stack);
     });
   }
 
@@ -264,11 +292,21 @@ class UserProgressProvider extends ChangeNotifier {
   }
 
   void addPracticeTime(int minutes) {
+    if (minutes <= 0) {
+      _logger.logValidation('Progress', 'addPracticeTime', 'non-positive minutes',
+          data: {'minutes': minutes});
+      return;
+    }
+    if (minutes > 480) {
+      _logger.logOverflow('Progress', 'addPracticeTime', value: minutes, max: 480,
+          data: {'note': 'capped at 8 hours'});
+      minutes = 480;
+    }
     final old = totalMinutesPracticed;
     totalMinutesPracticed += minutes;
     _logger.logStateChangeInt('Progress', 'totalMinutesPracticed', old, totalMinutesPracticed);
     notifyListeners();
-    _saveToStorage();
+    _scheduleSave();
   }
 
   Future<void> resetAll() async {

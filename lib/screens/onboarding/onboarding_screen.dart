@@ -1,4 +1,5 @@
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../i18n/translations.dart';
@@ -115,9 +116,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_currentPage < _totalPages - 1) {
       _logger.logButton('Onboarding', 'Next', data: {'page': _currentPage, 'to': _currentPage + 1});
       _isAnimating = true;
+      // Safety timeout: if animation callback never fires, recover after 2s
+      final safetyTimer = Timer(const Duration(seconds: 2), () {
+        if (_isAnimating && mounted) {
+          _logger.logRecover('Onboarding', 'page animation stuck — safety timeout fired', data: {
+            'page': _currentPage,
+          });
+          _isAnimating = false;
+          if (_currentPage < _totalPages - 1) {
+            setState(() => _currentPage++);
+          }
+        }
+      });
       try {
         _pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+        // If successful, the _onPageChanged callback will reset _isAnimating
       } catch (e, stack) {
+        safetyTimer.cancel();
         _logger.logAsyncFail('Onboarding', 'nextPage-controller-failed', e, stack,
             data: {'fromPage': _currentPage});
         _isAnimating = false;

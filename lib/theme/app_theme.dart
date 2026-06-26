@@ -17,24 +17,28 @@ class AppColors {
 }
 
 class AppTheme {
-  static ThemeData get lightTheme {
+  static ThemeData get lightTheme => _buildTheme(Brightness.light);
+  static ThemeData get darkTheme => _buildTheme(Brightness.dark);
+
+  static ThemeData _buildTheme(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
         primary: AppColors.primary,
         secondary: AppColors.accent,
-        surface: AppColors.surface,
+        surface: isDark ? const Color(0xFF1E1E2E) : AppColors.surface,
         error: AppColors.error,
-        brightness: Brightness.light,
+        brightness: brightness,
       ),
-      scaffoldBackgroundColor: AppColors.background,
-      appBarTheme: const AppBarTheme(
+      scaffoldBackgroundColor: isDark ? const Color(0xFF121220) : AppColors.background,
+      appBarTheme: AppBarTheme(
         elevation: 0,
         centerTitle: true,
-        backgroundColor: AppColors.primary,
+        backgroundColor: isDark ? const Color(0xFF1A1A2E) : AppColors.primary,
         foregroundColor: Colors.white,
-        titleTextStyle: TextStyle(
+        titleTextStyle: const TextStyle(
           fontSize: 20, fontWeight: FontWeight.w700,
           color: Colors.white, letterSpacing: -0.5,
         ),
@@ -56,7 +60,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: isDark ? const Color(0xFF2A2A3E) : AppColors.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,

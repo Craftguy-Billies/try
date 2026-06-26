@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_progress.dart';
@@ -11,6 +12,8 @@ class StorageService {
   final _logger = AuditLogger();
   SharedPreferences? _prefs;
   UserProgress? _cachedProgress;
+  Future<void>? _pendingSave;
+  UserProgress? _queuedProgress;
 
   bool get isReady => _prefs != null;
 
@@ -55,10 +58,29 @@ class StorageService {
   }
 
   Future<void> saveProgress(UserProgress p) async {
+    _cachedProgress = p;
+    if (_pendingSave != null) {
+      _queuedProgress = p;
+      _logger.logDebounce('Storage', 'saveProgress — queued (previous save in progress)');
+      return _pendingSave;
+    }
     _logger.logAsyncStart('Storage', 'saveProgress');
+    _pendingSave = _doSave(p);
+    await _pendingSave;
+    // After completing, check if another save was queued
+    while (_queuedProgress != null) {
+      final next = _queuedProgress!;
+      _queuedProgress = null;
+      _logger.logConcurrent('Storage', 'saveProgress — draining queued save');
+      _pendingSave = _doSave(next);
+      await _pendingSave;
+    }
+    _pendingSave = null;
+  }
+
+  Future<void> _doSave(UserProgress p) async {
     try {
       _prefs ??= await SharedPreferences.getInstance();
-      _cachedProgress = p;
       final encoded = jsonEncode(p.toJson());
       await _prefs!.setString('user_progress', encoded);
       _logger.logAsyncDone('Storage', 'saveProgress', data: {

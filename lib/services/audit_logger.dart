@@ -203,6 +203,117 @@ class AuditLogger {
   void logProvider(String action, String provider, {Map<String, dynamic>? data}) =>
       debug('Provider', '$action $provider', data: data);
 
+  // ─── Validation ──────────────────────────────────────────────
+
+  void logValidation(String widget, String field, String issue, {Map<String, dynamic>? data}) =>
+      warn('Validation', '$widget.$field: $issue', data: data);
+
+  void logInputRejected(String widget, String reason, {Map<String, dynamic>? data}) =>
+      debug('Input', '$widget rejected: $reason', data: data);
+
+  // ─── Network / Connectivity ──────────────────────────────────
+
+  void logNetwork(String event, {Map<String, dynamic>? data}) =>
+      info('Network', event, data: data);
+
+  void logConnectivity(String status, {Map<String, dynamic>? data}) =>
+      info('Connectivity', status, data: data);
+
+  void logTimeout(String widget, String operation, {Duration? limit, Map<String, dynamic>? data}) {
+    final d = Map<String, dynamic>.from(data ?? {});
+    if (limit != null) d['timeout_ms'] = limit.inMilliseconds;
+    warn('Timeout', '$widget.$operation timed out', data: d);
+  }
+
+  // ─── Permission / Restriction ────────────────────────────────
+
+  void logPermission(String widget, String permission, bool granted, {Map<String, dynamic>? data}) =>
+      info('Permission', '$widget.$permission: ${granted ? "granted" : "denied"}', data: data);
+
+  void logRestricted(String widget, String op, {Map<String, dynamic>? data}) =>
+      warn('Restricted', '$widget: $op blocked by restriction', data: data);
+
+  // ─── Throttle / Debounce ─────────────────────────────────────
+
+  void logThrottle(String widget, String action, {Map<String, dynamic>? data}) =>
+      debug('Throttle', '$widget: $action throttled', data: data);
+
+  void logDebounce(String widget, String action, {Map<String, dynamic>? data}) =>
+      debug('Debounce', '$widget: $action debounced', data: data);
+
+  // ─── Overflow / Bounds ───────────────────────────────────────
+
+  void logOverflow(String widget, String field, {dynamic value, dynamic max, Map<String, dynamic>? data}) {
+    final d = Map<String, dynamic>.from(data ?? {});
+    d['value'] = value?.toString();
+    d['max'] = max?.toString();
+    warn('Overflow', '$widget.$field exceeded bounds', data: d);
+  }
+
+  void logUnderflow(String widget, String field, {dynamic value, dynamic min, Map<String, dynamic>? data}) {
+    final d = Map<String, dynamic>.from(data ?? {});
+    d['value'] = value?.toString();
+    d['min'] = min?.toString();
+    warn('Underflow', '$widget.$field below minimum', data: d);
+  }
+
+  void logBounds(String widget, String detail, {Map<String, dynamic>? data}) =>
+      debug('Bounds', '$widget: $detail', data: data);
+
+  // ─── Concurrency / Race ──────────────────────────────────────
+
+  void logRaceGuard(String widget, String op, {Map<String, dynamic>? data}) =>
+      warn('Race', '$widget: $op guarded against concurrent execution', data: data);
+
+  void logConcurrent(String widget, String detail, {Map<String, dynamic>? data}) =>
+      debug('Concurrent', '$widget: $detail', data: data);
+
+  // ─── Empty / Zero-value ──────────────────────────────────────
+
+  void logEmpty(String widget, String collection, {Map<String, dynamic>? data}) =>
+      info('Empty', '$widget: $collection is empty', data: data);
+
+  void logZero(String widget, String value, {Map<String, dynamic>? data}) =>
+      debug('Zero', '$widget: $value is zero/null', data: data);
+
+  // ─── Unexpected state ────────────────────────────────────────
+
+  void logUnexpected(String widget, String detail, {Map<String, dynamic>? data}) =>
+      error('Unexpected', '$widget: $detail', d: data);
+
+  void logInconsistent(String widget, String detail, {Map<String, dynamic>? data}) =>
+      warn('Inconsistent', '$widget: $detail', data: data);
+
+  // ─── Performance ─────────────────────────────────────────────
+
+  void logPerf(String widget, String op, {Duration? elapsed, Map<String, dynamic>? data}) {
+    final d = Map<String, dynamic>.from(data ?? {});
+    if (elapsed != null) d['elapsed_ms'] = elapsed.inMilliseconds;
+    debug('Perf', '$widget.$op', data: d);
+  }
+
+  void logSlowRender(String widget, {Duration? elapsed, Map<String, dynamic>? data}) {
+    final d = Map<String, dynamic>.from(data ?? {});
+    if (elapsed != null) d['elapsed_ms'] = elapsed.inMilliseconds;
+    warn('Perf', '$widget: slow render', data: d);
+  }
+
+  // ─── Intentionally ignored / suppressed ─────────────────────
+
+  void logSuppress(String widget, String what, String reason, {Map<String, dynamic>? data}) =>
+      debug('Suppress', '$widget: $what suppressed because $reason', data: data);
+
+  void logNoop(String widget, String action, {Map<String, dynamic>? data}) =>
+      debug('Noop', '$widget: $action — intentionally no-op', data: data);
+
+  // ─── Diagnostic / health check ─────────────────────────────
+
+  void logDiag(String widget, String detail, {Map<String, dynamic>? data}) =>
+      debug('Diag', '$widget: $detail', data: data);
+
+  void logMemory(String widget, String detail, {Map<String, dynamic>? data}) =>
+      debug('Memory', '$widget: $detail', data: data);
+
   // ─── History access ──────────────────────────────────────────
 
   List<LogEntry> get history => List.unmodifiable(_history);

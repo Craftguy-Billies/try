@@ -31,7 +31,15 @@ class ExamResultScreen extends StatelessWidget {
       _logger.logEdge('ExamResult', 'zero-total-division-guard', data: {'score': score, 'total': total});
     }
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _logger.logBackPress('ExamResult', handled: false,
+              data: {'note': 'back disabled — must use Home or Review button'});
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(title: Text(t.get('exam_result')), automaticallyImplyLeading: false),
       body: SingleChildScrollView(padding: const EdgeInsets.all(16),
         child: Column(children: [
@@ -73,7 +81,7 @@ class ExamResultScreen extends StatelessWidget {
           },
             child: Text(t.get('review') + ' ' + t.get('flashcards').toLowerCase())),
         ])),
-    );
+    ));
   }
 
   Widget _stat(String label, String value, Color color) {

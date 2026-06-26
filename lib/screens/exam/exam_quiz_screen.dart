@@ -25,6 +25,7 @@ class _ExamQuizScreenState extends State<ExamQuizScreen> {
   int _secondsLeft = 0;
   Timer? _timer;
   bool _submitted = false;
+  bool _quitDialogShown = false;
   int _tickCount = 0;
 
   @override
@@ -153,18 +154,25 @@ class _ExamQuizScreenState extends State<ExamQuizScreen> {
       _logger.logGuard('ExamQuiz', 'quit-dialog-after-submit');
       return;
     }
+    if (_quitDialogShown) {
+      _logger.logGuard('ExamQuiz', 'quit-dialog-already-shown');
+      return;
+    }
+    _quitDialogShown = true;
     _logger.logDialogShow('QuitConfirm', 'ExamQuiz', data: {
       'currentQ': _current, 'answered': _answers.length, 'total': _questions.length,
     });
+    final t = Translations(Localizations.localeOf(context).languageCode);
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-      title: Text(Translations(Localizations.localeOf(ctx).languageCode).get('cancel')),
+      title: Text(t.get('cancel')),
       content: const Text('Are you sure you want to quit? Your progress will be lost.'),
       actions: [
         TextButton(onPressed: () {
           _logger.logDialogResult('QuitConfirm', 'Continue');
+          _quitDialogShown = false;
           Navigator.pop(ctx);
         }, child: const Text('Continue')),
         TextButton(onPressed: () {
@@ -174,6 +182,7 @@ class _ExamQuizScreenState extends State<ExamQuizScreen> {
           _logger.logEdge('ExamQuiz', 'user-quit-early', data: {
             'progress': '${_current + 1}/${_questions.length}', 'answered': _answers.length,
           });
+          _quitDialogShown = false;
           Navigator.pop(ctx);
           _timer?.cancel();
           _logger.logTimerCancel('ExamQuiz');
@@ -184,6 +193,7 @@ class _ExamQuizScreenState extends State<ExamQuizScreen> {
           child: const Text('Quit', style: TextStyle(color: AppColors.error))),
       ]),
     ).then((_) {
+      _quitDialogShown = false;
       // If dialog dismissed without explicit button (back button on dialog)
       if (!_submitted) {
         _logger.logDialogResult('QuitConfirm', 'dismissed-via-back-or-tap-outside');

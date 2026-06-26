@@ -6,9 +6,12 @@ import 'services/audit_logger.dart';
 
 void main() {
   final logger = AuditLogger();
+  final platformDispatcher = ui.PlatformDispatcher.instance;
   logger.info('App', 'main() called — initializing Flutter app', data: {
-    'dart_version': ui.PlatformDispatcher.instance.defaultRouteName,
-    'platform': ui.PlatformDispatcher.instance.platformBrightness.name,
+    'platform': platformDispatcher.platformBrightness.name,
+    'locales': platformDispatcher.locales.map((l) => l.languageCode).toList(),
+    'accessibility': platformDispatcher.accessibilityFeatures.toString(),
+    'textScale': platformDispatcher.textScaleFactor,
   });
 
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +25,7 @@ void main() {
   };
 
   // Catch platform-level async errors
-  ui.PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+  platformDispatcher.onError = (Object error, StackTrace stack) {
     logger.critical('PlatformDispatcher', 'Unhandled platform error', e: error, s: stack);
     return true; // Don't terminate app on these errors
   };
@@ -33,6 +36,7 @@ void main() {
     logger.critical('Isolate', 'Unhandled isolate error',
         e: errorAndStack.first, s: errorAndStack.last as StackTrace?);
   }).sendPort);
+  logger.debug('App', 'Global error handlers installed');
 
   // Catch errors during runApp itself (synchronous)
   try {
@@ -44,16 +48,26 @@ void main() {
         e: e, s: stack);
     // Attempt to show a minimal error widget as fallback
     try {
-      runApp(MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: Text('App failed to start: $e',
-                textDirection: TextDirection.ltr),
+      runApp(Directionality(
+        textDirection: TextDirection.ltr,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('App failed to start\n\n$e',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14)),
+              ),
+            ),
           ),
         ),
       ));
-    } catch (_) {
-      // Nothing more we can do
+      logger.logRecover('App', 'fallback error widget rendered');
+    } catch (e2, stack2) {
+      logger.critical('App', 'Even fallback widget failed — total startup failure',
+          e: e2, s: stack2);
     }
   }
 }
