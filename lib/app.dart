@@ -15,6 +15,7 @@ import 'screens/grammar/grammar_list_screen.dart';
 import 'screens/phrases/phrases_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/profile/settings_screen.dart';
+import 'screens/not_found/not_found_screen.dart';
 
 class FrenchLearnApp extends StatefulWidget {
   const FrenchLearnApp({super.key});
@@ -293,12 +294,12 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
             case '/profile': page = const ProfileScreen(); break;
             case '/settings': page = const SettingsScreen(); break;
             case null:
-              _logger.logEdge('Router', 'null-route-name — using /home as fallback');
-              page = const HomeScreen();
+              _logger.logEdge('Router', 'null-route-name — showing 404');
+              page = const NotFoundScreen();
               break;
             default:
-              _logger.logFallback('Router', 'Unknown route', '/home', data: {'requested': routeName});
-              page = const HomeScreen();
+              _logger.logFallback('Router', 'Unknown route', '/404', data: {'requested': routeName});
+              page = const NotFoundScreen();
           }
           _logger.logNavigate('init', routeName ?? '/', data: {'widget': page.runtimeType.toString()});
           return MaterialPageRoute(builder: (_) => page, settings: settings);
