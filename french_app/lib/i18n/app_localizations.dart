@@ -74,6 +74,10 @@ class AppLocalizations {
   String get home_words_today => _t('home_words_today');
   String get home_review_due => _t('home_review_due');
   String get home_words_to_review => _t('home_words_to_review');
+  String get home_flashcards => _t('home_flashcards');
+  String get home_flashcards_subtitle => _t('home_flashcards_subtitle');
+  String get home_categories => _t('home_categories');
+  String get home_categories_subtitle => _t('home_categories_subtitle');
 
   // ─── Learn ───
 

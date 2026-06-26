@@ -432,8 +432,8 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Expanded(
               child: _QuickActionCard(
-                title: 'Flashcards',
-                subtitle: 'Review vocabulary',
+                title: i18n.home_flashcards,
+                subtitle: i18n.home_flashcards_subtitle,
                 icon: Icons.style_rounded,
                 gradient: const [Color(0xFF00B894), Color(0xFF00CEC9)],
                 onTap: () {
@@ -448,8 +448,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: _QuickActionCard(
-                title: 'Categories',
-                subtitle: 'Browse by topic',
+                title: i18n.home_categories,
+                subtitle: i18n.home_categories_subtitle,
                 icon: Icons.folder_rounded,
                 gradient: const [Color(0xFF9B59B6), Color(0xFFB07CC6)],
                 onTap: () {

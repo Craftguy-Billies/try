@@ -4330,7 +4330,7 @@ final List<VocabItem> _allVocab = [
   ),
 ];
 
-List<VocabItem> getAllVocab() => List.unmodifiable(_allVocab);
+List<VocabItem> getAllVocab() => _allVocab.toList();
 
 List<VocabItem> getVocabByLevel(String level) =>
     _allVocab.where((v) => v.level == level).toList();
