@@ -11,7 +11,6 @@ import '../../widgets/progress_card.dart';
 import '../../widgets/category_card.dart';
 import '../../widgets/app_drawer.dart';
 import '../vocabulary/vocabulary_list_screen.dart';
-import '../exam/exam_home_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});

@@ -16,7 +16,7 @@ class AppDrawer extends StatelessWidget {
 
     return Drawer(
       child: SafeArea(
-        child: Column(children: [
+        child: ListView(children: [
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -39,7 +39,7 @@ class AppDrawer extends StatelessWidget {
           _drawerItem(context, Icons.quiz, t.get('exam'), '/exam', currentRoute),
           _drawerItem(context, Icons.auto_stories, t.get('grammar'), '/grammar', currentRoute),
           _drawerItem(context, Icons.chat_bubble, t.get('phrases'), '/phrases', currentRoute),
-          const Spacer(),
+          const SizedBox(height: 24),
           const Divider(),
           _drawerItem(context, Icons.person, t.get('profile'), '/profile', currentRoute),
           _drawerItem(context, Icons.settings, t.get('settings'), '/settings', currentRoute),

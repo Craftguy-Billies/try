@@ -15,7 +15,6 @@ import 'screens/grammar/grammar_list_screen.dart';
 import 'screens/phrases/phrases_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/profile/settings_screen.dart';
-import 'models/user_progress.dart';
 
 class FrenchLearnApp extends StatefulWidget {
   const FrenchLearnApp({super.key});
