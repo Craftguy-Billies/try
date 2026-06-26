@@ -40,7 +40,7 @@ class UserProgress {
     }
   }
 
-  bool get isWordMastered => masteredWordIds.isNotEmpty; // convenience
+  bool get hasMasteredWords => masteredWordIds.isNotEmpty;
 
   void markWordReviewed(String wordId) {
     totalWordsReviewed++;

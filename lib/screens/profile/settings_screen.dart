@@ -105,8 +105,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Notify app to rebuild with new theme
             final appState = FrenchLearnApp.of(context);
             if (appState != null) {
-              _logger.logEdge('Settings', 'dark mode toggle — app rebuild needed');
-              appState.setState(() {});
+              _logger.logEdge('Settings', 'dark mode toggle — refreshing app theme');
+              appState.refreshDarkMode();
             }
           } : null)),
         Card(child: SwitchListTile(

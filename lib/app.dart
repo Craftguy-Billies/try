@@ -38,6 +38,18 @@ class FrenchLearnAppState extends State<FrenchLearnApp> with WidgetsBindingObser
 
   Locale get locale => _locale;
 
+  Future<void> refreshDarkMode() async {
+    try {
+      final dark = await StorageService().getDarkMode();
+      if (mounted && _darkMode != dark) {
+        setState(() => _darkMode = dark);
+        _logger.info('App', 'Dark mode refreshed from storage: $dark');
+      }
+    } catch (e, stack) {
+      _logger.logAsyncFail('App', 'refreshDarkMode', e, stack);
+    }
+  }
+
   void changeLanguage(String code) {
     if (!_initialized) {
       _logger.logGuard('App', 'changeLanguage-before-init', data: {'code': code});

@@ -68,6 +68,19 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
     }
     setState(() => _showBack = !_showBack);
     _logger.logTap('Flashcard', 'card-flip', data: {'front→back': oldShowBack ? 'no' : 'yes'});
+
+    // Mark last card complete when flipping to back (user has studied it)
+    if (!oldShowBack && _index >= widget.words.length - 1) {
+      try {
+        final word = widget.words[_index];
+        final progress = context.read<UserProgressProvider>();
+        progress.markWordComplete(word.id, word.category);
+        _logger.info('Flashcard', '🎉 All flashcards completed!', data: {'total': widget.words.length});
+      } catch (e, stack) {
+        _logger.logAsyncFail('Flashcard', 'markLastWordComplete-on-flip', e, stack,
+            data: {'wordId': widget.words[_index].id});
+      }
+    }
   }
 
   void _next() {
@@ -95,16 +108,7 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
 
       if (_index >= widget.words.length - 1) {
         _logger.logEdge('Flashcard', 'last-word-reached', data: {'index': _index, 'total': widget.words.length});
-        _logger.info('Flashcard', '🎉 All flashcards completed!', data: {'total': widget.words.length, 'completed': completedWord.id});
-        // Mark the last card complete too
-        try {
-          final lastWord = widget.words[widget.words.length - 1];
-          final progress = context.read<UserProgressProvider>();
-          progress.markWordComplete(lastWord.id, lastWord.category);
-        } catch (e, stack) {
-          _logger.logAsyncFail('Flashcard', 'markLastWordComplete', e, stack,
-              data: {'wordId': widget.words.last.id});
-        }
+        _logger.info('Flashcard', '🎉 All flashcards completed!', data: {'total': widget.words.length});
       }
     } else {
       _logger.logGuard('Flashcard', 'next-at-end', data: {'index': _index, 'total': widget.words.length});

@@ -15,7 +15,6 @@ class ConversationScreen extends StatefulWidget {
 
 class _ConversationScreenState extends State<ConversationScreen> {
   final _logger = AuditLogger();
-  bool _scrolledToEnd = false;
 
   @override
   void initState() {
@@ -31,7 +30,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   void dispose() {
     _logger.logDispose('Conversation(${widget.conversation.id})', data: {
-      'lines': widget.conversation.lines.length, 'scrolledToEnd': _scrolledToEnd,
+      'lines': widget.conversation.lines.length,
     });
     super.dispose();
   }
@@ -58,9 +57,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
             style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontStyle: FontStyle.italic))),
         Expanded(child: NotificationListener<ScrollNotification>(
           onNotification: (notification) {
-            if (!_scrolledToEnd && notification.metrics.pixels >= notification.metrics.maxScrollExtent - 50) {
-              _scrolledToEnd = true;
+            if (notification.metrics.pixels >= notification.metrics.maxScrollExtent - 50) {
               _logger.logEdge('Conversation(${widget.conversation.id})', 'scrolled-to-end');
+              return true;
             }
             return false;
           },
