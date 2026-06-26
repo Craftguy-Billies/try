@@ -55,11 +55,14 @@
 
 ## 2026-06-26T13:32 — both are flutter and can be built as apk right? but what is the difference betwe…
 
-## 2026-06-26T13:52 — french learn public url is a blank screen? did u even self tested
-
 ## 2026-06-26T14:05 — ?
 **Request:** ?
 **Status:** [OK] Success
 **What was done:** Here's a summary of where things stand on the branch: --- 📊 Project Status: French Learning Flutter App Branch: — 16 commits ahead of , already up to date with remote. Recent fixes applied (last 5 commits): 1. Missing , unmodifiable list crash, i18n hardcoded strings 2.
+
+## 2026-06-26T14:17 — french learn public url is a blank screen? did u even self tested
+**Request:** french learn public url is a blank screen? did u even self tested
+**Status:** [FAIL] Failed
+**What was done:** None
 
 ## VibeCoder — Task Log
