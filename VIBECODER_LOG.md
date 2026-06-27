@@ -100,4 +100,9 @@
 **Status:** [OK] Success
 **What was done:** Here's the breakdown of the Dart source code I wrote in this commit (excluding auto-generated Flutter scaffolding, platform configs, gradle files, native C++/Swift, images, etc.): Root App ( ) — 15 files · 3,115 lines | File | Lines | |---|---| | | 310 | | | 80 | | | 82 | | | 154 | | | 105 | | | 334 | | | 106 | | | 34 | | | 43 | | | 40…
 
+## 2026-06-27T06:59 — closed the 2 urls again. open back
+**Request:** closed the 2 urls again. open back
+**Status:** [OK] Success
+**What was done:** Both URLs are back online: - Port 12000 (main app): https://work-1-ovipzntgtktmczsx.prod-runtime.all-hands.dev/ - Port 12001 (french_app): https://work-2-ovipzntgtktmczsx.prod-runtime.all-hands.dev/ Both servers are running and returning HTTP 200 — no code changes were needed, just restarted the servers.
+
 ## VibeCoder — Task Log
