@@ -44,7 +44,7 @@ class _VocabularyListScreenState extends State<VocabularyListScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Translations(Localizations.localeOf(context).languageCode);
-    final vocab = context.watch<VocabularyService>();
+    final vocab = context.read<VocabularyService>();
     var words = widget.categoryId != null ? vocab.byCategory(widget.categoryId!) : vocab.allWords;
 
     if (_prevTotalWords > 0 && words.isEmpty) {

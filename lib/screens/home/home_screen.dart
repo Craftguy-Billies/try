@@ -19,7 +19,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final _logger = AuditLogger();
     final t = Translations(Localizations.localeOf(context).languageCode);
-    final vocab = context.watch<VocabularyService>();
+    final vocab = context.read<VocabularyService>();
     final progress = context.watch<UserProgressProvider>();
 
     _logger.logScreenView('Home', p: {

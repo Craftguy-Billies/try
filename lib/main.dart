@@ -31,11 +31,18 @@ void main() {
   };
 
   // Catch truly unhandled zone-level errors (Isolate errors, etc.)
-  Isolate.current.addErrorListener(RawReceivePort((dynamic pair) {
-    final errorAndStack = pair as List<dynamic>;
-    logger.critical('Isolate', 'Unhandled isolate error',
-        e: errorAndStack.first, s: errorAndStack.last as StackTrace?);
-  }).sendPort);
+  // RawReceivePort is unsupported on web; wrap in try/catch for graceful degradation
+  try {
+    Isolate.current.addErrorListener(RawReceivePort((dynamic pair) {
+      final errorAndStack = pair as List<dynamic>;
+      logger.critical('Isolate', 'Unhandled isolate error',
+          e: errorAndStack.first, s: errorAndStack.last as StackTrace?);
+    }).sendPort);
+    logger.debug('App', 'Isolate error listener installed');
+  } catch (e) {
+    logger.debug('App', 'Isolate error listener unavailable (web platform), continuing',
+        data: {'error': e.toString()});
+  }
   logger.debug('App', 'Global error handlers installed');
 
   // Catch errors during runApp itself (synchronous)
