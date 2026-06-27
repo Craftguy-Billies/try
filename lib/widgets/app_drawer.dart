@@ -16,7 +16,13 @@ class AppDrawer extends StatelessWidget {
 
     return Drawer(
       child: SafeArea(
-        child: ListView(children: [
+        child: PopScope(
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) {
+              _logger.logLifecycle('AppDrawer', 'closed', data: {'route': currentRoute});
+            }
+          },
+          child: ListView(children: [
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -45,6 +51,7 @@ class AppDrawer extends StatelessWidget {
           _drawerItem(context, Icons.settings, t.get('settings'), '/settings', currentRoute),
           const SizedBox(height: 16),
         ]),
+        ),
       ),
     );
   }

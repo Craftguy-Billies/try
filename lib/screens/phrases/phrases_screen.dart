@@ -94,6 +94,9 @@ class PhrasesScreen extends StatelessWidget {
           child: ListTile(
             title: Text(p.french, style: const TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text(p.english + (p.formality != null ? '  2022  ${p.formality}' : '')),
+            onTap: () {
+              _logger.logTap('Phrases', 'phrase:${p.french}', data: {'section': title, 'english': p.english});
+            },
             trailing: IconButton(icon: const Icon(Icons.volume_up, size: 20),
               onPressed: () {
                 _logger.logButton('Phrases', 'Audio:$title', data: {'text': p.french});

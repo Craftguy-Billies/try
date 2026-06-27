@@ -72,13 +72,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 Text(line.speaker, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary)),
                 const SizedBox(height: 4),
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Expanded(child: Container(padding: const EdgeInsets.all(12),
+                  Expanded(child: GestureDetector(
+                    onTap: () {
+                      _logger.logTap('Conversation', 'line:$i:${line.speaker}', data: {
+                        'french': line.french, 'english': line.english,
+                      });
+                    },
+                    child: Container(padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(line.french, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 4),
                       Text(line.english, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                    ]))),
+                    ])))),
                   const SizedBox(width: 4),
                   IconButton(icon: const Icon(Icons.volume_up, size: 20),
                     onPressed: () {

@@ -16,6 +16,7 @@ class _GrammarLessonScreenState extends State<GrammarLessonScreen> {
   int _exerciseIdx = 0;
   String? _selected;
   bool? _correct;
+  bool _exercisesCompleteLogged = false;
 
   @override
   void initState() {
@@ -50,10 +51,21 @@ class _GrammarLessonScreenState extends State<GrammarLessonScreen> {
     super.dispose();
   }
 
+  void _logExercisesComplete(GrammarLesson lesson) {
+    _exercisesCompleteLogged = true;
+    _logger.logUserAction('Grammar:exercises-complete', p: {
+      'lessonId': lesson.id, 'totalExercises': lesson.exercises.length,
+    });
+    _logger.info('GrammarLesson', 'All ${lesson.exercises.length} exercises completed for ${lesson.id}');
+  }
+
   @override
   Widget build(BuildContext context) {
     final isFr = Localizations.localeOf(context).languageCode == 'fr';
     final lesson = widget.lesson;
+    if (_exerciseIdx >= lesson.exercises.length && lesson.exercises.isNotEmpty && !_exercisesCompleteLogged) {
+      _logExercisesComplete(lesson);
+    }
     return Scaffold(
       appBar: AppBar(title: Text(isFr ? lesson.titleFr : lesson.titleEn)),
       body: SingleChildScrollView(padding: const EdgeInsets.all(16),
@@ -78,14 +90,15 @@ class _GrammarLessonScreenState extends State<GrammarLessonScreen> {
             const SizedBox(height: 8),
             const Text('Exercises', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
             const SizedBox(height: 12),
-            if (_exerciseIdx >= lesson.exercises.length)
+            if (_exerciseIdx >= lesson.exercises.length) ...[
               Card(child: Padding(padding: const EdgeInsets.all(20),
                 child: Column(children: [
                   const Icon(Icons.check_circle, color: AppColors.success, size: 48),
                   const SizedBox(height: 8),
                   Text('All ${lesson.exercises.length} exercises completed!', textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.success)),
-                ])))
+                ]))),
+            ]
             else ...[
               if (lesson.exercises[_exerciseIdx].options.isEmpty)
                 Card(child: Padding(padding: const EdgeInsets.all(20),

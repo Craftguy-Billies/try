@@ -51,9 +51,9 @@ class ProfileScreen extends StatelessWidget {
           Card(child: Padding(padding: const EdgeInsets.all(20),
             child: Column(children: [
               Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-                _bigStat('🔥 ${progress.currentStreak}', t.get('streak')),
-                _bigStat('📚 ${progress.totalWordsLearned}', t.get('words_learned')),
-                _bigStat('⏱ ${progress.totalMinutesPracticed}', t.get('minutes_practiced')),
+                _bigStat(context, '🔥 ${progress.currentStreak}', t.get('streak'), 'streak', progress.currentStreak),
+                _bigStat(context, '📚 ${progress.totalWordsLearned}', t.get('words_learned'), 'words', progress.totalWordsLearned),
+                _bigStat(context, '⏱ ${progress.totalMinutesPracticed}', t.get('minutes_practiced'), 'minutes', progress.totalMinutesPracticed),
               ]),
             ]))),
           const SizedBox(height: 20),
@@ -69,11 +69,17 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _bigStat(String value, String label) {
-    return Column(children: [
-      Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-      Text(label, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-    ]);
+  Widget _bigStat(BuildContext context, String value, String label, String statKey, int statValue) {
+    final _logger = AuditLogger();
+    return GestureDetector(
+      onTap: () {
+        _logger.logTap('Profile', 'StatCard:$statKey', data: {'value': statValue, 'label': label});
+      },
+      child: Column(children: [
+        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+        Text(label, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+      ]),
+    );
   }
 
   Widget _menuItem(IconData icon, String title, VoidCallback onTap) {

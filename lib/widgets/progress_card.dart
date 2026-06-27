@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../i18n/translations.dart';
+import '../services/audit_logger.dart';
 
 class ProgressCard extends StatelessWidget {
   final int wordsLearned;
@@ -15,6 +16,11 @@ class ProgressCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Translations(Localizations.localeOf(context).languageCode);
+    final _logger = AuditLogger();
+    _logger.logScreenView('Home.ProgressCard', p: {
+      'words': wordsLearned, 'streak': streak,
+      'minutes': minutesPracticed, 'goal': dailyGoal,
+    });
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -46,11 +52,17 @@ class ProgressCard extends StatelessWidget {
   }
 
   Widget _stat(BuildContext context, IconData icon, String value, String label) {
-    return Column(children: [
-      Icon(icon, color: Colors.white, size: 28),
-      const SizedBox(height: 6),
-      Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-      Text(label, style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 11)),
-    ]);
+    final _logger = AuditLogger();
+    return GestureDetector(
+      onTap: () {
+        _logger.logTap('ProgressCard', 'Stat:$label', data: {'value': value});
+      },
+      child: Column(children: [
+        Icon(icon, color: Colors.white, size: 28),
+        const SizedBox(height: 6),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+        Text(label, style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 11)),
+      ]),
+    );
   }
 }
