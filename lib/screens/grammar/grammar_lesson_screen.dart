@@ -64,7 +64,9 @@ class _GrammarLessonScreenState extends State<GrammarLessonScreen> {
     final isFr = Localizations.localeOf(context).languageCode == 'fr';
     final lesson = widget.lesson;
     if (_exerciseIdx >= lesson.exercises.length && lesson.exercises.isNotEmpty && !_exercisesCompleteLogged) {
-      _logExercisesComplete(lesson);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _logExercisesComplete(lesson);
+      });
     }
     return Scaffold(
       appBar: AppBar(title: Text(isFr ? lesson.titleFr : lesson.titleEn)),

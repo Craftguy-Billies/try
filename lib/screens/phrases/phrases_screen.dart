@@ -93,7 +93,7 @@ class PhrasesScreen extends StatelessWidget {
         ...phrases.map((p) => Card(margin: const EdgeInsets.only(bottom: 6),
           child: ListTile(
             title: Text(p.french, style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(p.english + (p.formality != null ? '  2022  ${p.formality}' : '')),
+            subtitle: Text(p.english + (p.formality != null ? '  \u2022  ${p.formality}' : '')),
             onTap: () {
               _logger.logTap('Phrases', 'phrase:${p.french}', data: {'section': title, 'english': p.english});
             },
