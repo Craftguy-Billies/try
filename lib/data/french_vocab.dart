@@ -294,20 +294,24 @@ const _workSchool = [
   VocabWord(french: "l'emploi", english: 'job / employment', partOfSpeech: 'noun (m)', category: 'Work & School', difficulty: 2, example: "Elle cherche un emploi dans l'informatique."),
 ];
 
-// ─── Category 11: DELF A1 Essentials ────────────────────────────────────────
+// ─── Category 11: Numbers ────────────────────────────────────────────────────
+
+const _numbers = [
+  VocabWord(french: 'un', english: 'one', partOfSpeech: 'number', category: 'Numbers', difficulty: 1, example: 'J\'ai un frère.'),
+  VocabWord(french: 'deux', english: 'two', partOfSpeech: 'number', category: 'Numbers', difficulty: 1, example: 'J\'ai deux chats.'),
+  VocabWord(french: 'trois', english: 'three', partOfSpeech: 'number', category: 'Numbers', difficulty: 1, example: 'Il y a trois chambres.'),
+  VocabWord(french: 'quatre', english: 'four', partOfSpeech: 'number', category: 'Numbers', difficulty: 1, example: 'Nous sommes quatre à table.'),
+  VocabWord(french: 'cinq', english: 'five', partOfSpeech: 'number', category: 'Numbers', difficulty: 1, example: 'Le billet coûte cinq euros.'),
+  VocabWord(french: 'six', english: 'six', partOfSpeech: 'number', category: 'Numbers', difficulty: 1, example: 'Ils sont six dans la famille.'),
+  VocabWord(french: 'sept', english: 'seven', partOfSpeech: 'number', category: 'Numbers', difficulty: 1, example: 'La semaine a sept jours.'),
+  VocabWord(french: 'huit', english: 'eight', partOfSpeech: 'number', category: 'Numbers', difficulty: 1, example: 'Le film commence à huit heures.'),
+  VocabWord(french: 'neuf', english: 'nine', partOfSpeech: 'number', category: 'Numbers', difficulty: 1, example: 'Ma nièce a neuf ans.'),
+  VocabWord(french: 'dix', english: 'ten', partOfSpeech: 'number', category: 'Numbers', difficulty: 1, example: 'Il y a dix élèves dans la classe.'),
+];
+
+// ─── Category 12: DELF A1 Essentials ────────────────────────────────────────
 
 const _delfA1Essentials = [
-  // Numbers
-  VocabWord(french: 'un', english: 'one', partOfSpeech: 'number', category: 'DELF A1 Essentials', difficulty: 1, example: 'J\'ai un frère.'),
-  VocabWord(french: 'deux', english: 'two', partOfSpeech: 'number', category: 'DELF A1 Essentials', difficulty: 1, example: 'J\'ai deux chats.'),
-  VocabWord(french: 'trois', english: 'three', partOfSpeech: 'number', category: 'DELF A1 Essentials', difficulty: 1, example: 'Il y a trois chambres.'),
-  VocabWord(french: 'quatre', english: 'four', partOfSpeech: 'number', category: 'DELF A1 Essentials', difficulty: 1, example: 'Nous sommes quatre à table.'),
-  VocabWord(french: 'cinq', english: 'five', partOfSpeech: 'number', category: 'DELF A1 Essentials', difficulty: 1, example: 'Le billet coûte cinq euros.'),
-  VocabWord(french: 'six', english: 'six', partOfSpeech: 'number', category: 'DELF A1 Essentials', difficulty: 1, example: 'Ils sont six dans la famille.'),
-  VocabWord(french: 'sept', english: 'seven', partOfSpeech: 'number', category: 'DELF A1 Essentials', difficulty: 1, example: 'La semaine a sept jours.'),
-  VocabWord(french: 'huit', english: 'eight', partOfSpeech: 'number', category: 'DELF A1 Essentials', difficulty: 1, example: 'Le film commence à huit heures.'),
-  VocabWord(french: 'neuf', english: 'nine', partOfSpeech: 'number', category: 'DELF A1 Essentials', difficulty: 1, example: 'Ma nièce a neuf ans.'),
-  VocabWord(french: 'dix', english: 'ten', partOfSpeech: 'number', category: 'DELF A1 Essentials', difficulty: 1, example: 'Il y a dix élèves dans la classe.'),
   // Days
   VocabWord(french: 'lundi', english: 'Monday', partOfSpeech: 'noun (m)', category: 'DELF A1 Essentials', difficulty: 1, example: 'Lundi, je vais au bureau.'),
   VocabWord(french: 'mardi', english: 'Tuesday', partOfSpeech: 'noun (m)', category: 'DELF A1 Essentials', difficulty: 1, example: 'Mardi, j\'ai un rendez-vous.'),
@@ -377,6 +381,7 @@ const List<VocabWord> allVocabWords = [
   ..._natureWeather,
   ..._healthBody,
   ..._workSchool,
+  ..._numbers,
   ..._delfA1Essentials,
 ];
 
