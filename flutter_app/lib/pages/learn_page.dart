@@ -89,9 +89,19 @@ class _LearnPageState extends State<LearnPage> with SingleTickerProviderStateMix
             Center(
               child: Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: Text(
-                  _sessionCorrect > 0 ? '${(_sessionCorrect / _sessionCount * 100).toInt()}%' : '0%',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: cs.primary, fontSize: 14),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Count: $_sessionCount',
+                      style: TextStyle(fontWeight: FontWeight.w500, color: cs.onSurface.withAlpha(160), fontSize: 13),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _sessionCorrect > 0 ? '${(_sessionCorrect / _sessionCount * 100).toInt()}%' : '0%',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: cs.primary, fontSize: 14),
+                    ),
+                  ],
                 ),
               ),
             ),
