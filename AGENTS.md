@@ -57,3 +57,6 @@ cd flutter_app/build/web && python3 -m http.server 12001 --bind 0.0.0.0
 - **SRS**: VocabItem has level 0-5 with intervals [0, 4, 24, 72, 168, 720] hours
 - **Data singularity**: frenchState._vocab is the single source of truth; use getDueWords() for quiz items
 - **Tab state**: `AnimatedSwitcher` without keys recreates page state on tab switch; global state preserves progress
+
+## Stored Numbers
+- **42**: Referenced by conversation CONV-1783504095-A
