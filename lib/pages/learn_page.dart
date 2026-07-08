@@ -79,6 +79,7 @@ class _LearnPageState extends State<LearnPage>
     setState(() => _isAnimating = true);
     if (_isFlipped) {
       _flipController.reverse().then((_) {
+        if (!mounted) return;
         setState(() {
           _isFlipped = false;
           _isAnimating = false;
@@ -86,6 +87,7 @@ class _LearnPageState extends State<LearnPage>
       });
     } else {
       _flipController.forward().then((_) {
+        if (!mounted) return;
         setState(() {
           _isFlipped = true;
           _isAnimating = false;
@@ -102,6 +104,7 @@ class _LearnPageState extends State<LearnPage>
     HapticFeedback.mediumImpact();
     setState(() => _showCheckmark = true);
     _checkController.forward().then((_) {
+      if (!mounted) return;
       _checkController.reset();
       _advanceCard();
     });

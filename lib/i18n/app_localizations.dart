@@ -6,7 +6,9 @@ class AppLocalizations {
   AppLocalizations(this.locale);
 
   static AppLocalizations of(BuildContext context) {
-    return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
+    final loc = Localizations.of<AppLocalizations>(context, AppLocalizations);
+    assert(loc != null, 'AppLocalizations not found in context');
+    return loc ?? AppLocalizations(const Locale('en'));
   }
 
   static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();

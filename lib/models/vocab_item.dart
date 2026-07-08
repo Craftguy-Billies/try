@@ -53,6 +53,16 @@ class VocabItem {
     return labels[srsLevel];
   }
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is VocabItem &&
+          word.french == other.word.french &&
+          word.english == other.word.english;
+
+  @override
+  int get hashCode => word.french.hashCode ^ word.english.hashCode;
+
   Map<String, dynamic> toJson() => {
         'french': word.french,
         'srsLevel': srsLevel,
